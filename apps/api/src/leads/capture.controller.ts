@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, NotFoundException, BadRequestException, TooManyRequestsException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { CaptureRateLimitGuard } from './guards/capture-rate-limit.guard';
 import { CaptureLeadDto } from './dto/capture-lead.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,7 +32,7 @@ export class CaptureController {
 
     const { allowed } = await this.subscriptionService.checkLimit(dto.orgId, 'leads');
     if (!allowed) {
-      throw new TooManyRequestsException({ error: 'PLAN_LIMIT_REACHED' });
+      throw new HttpException({ error: 'PLAN_LIMIT_REACHED' }, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const lead = await this.prisma.lead.create({

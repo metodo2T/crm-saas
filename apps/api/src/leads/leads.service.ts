@@ -34,8 +34,8 @@ export class LeadsService extends BaseService {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
     const where: Prisma.LeadWhereInput = { organizationId };
-    if (query.status) where.status = query.status;
-    if (query.source) where.source = query.source;
+    if (query.status) where.status = query.status as any;
+    if (query.source) where.source = query.source as any;
     if (query.assignedTo) where.assignedToId = query.assignedTo;
     if (query.search) {
       where.OR = [

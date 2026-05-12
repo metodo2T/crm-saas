@@ -1,5 +1,5 @@
 import { Controller, Post, RawBodyRequest, Req, Body, BadRequestException } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { Webhook } from 'svix';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';

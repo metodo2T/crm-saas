@@ -1,19 +1,20 @@
 import { Controller, Post, Headers, RawBodyRequest, Req, BadRequestException } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
-  private stripe: Stripe;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private stripe: any;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptionService: SubscriptionService,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder', {
-      apiVersion: '2026-04-22.dahlia',
+      apiVersion: '2026-04-22.dahlia' as any,
     });
   }
 
@@ -22,7 +23,7 @@ export class StripeWebhookController {
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') sig: string,
   ) {
-    let event: Stripe.Event;
+    let event: any;
 
     try {
       event = this.stripe.webhooks.constructEvent(
@@ -35,7 +36,7 @@ export class StripeWebhookController {
     }
 
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as any;
       const orgId = session.client_reference_id!;
       const subId = session.subscription as string;
       const customerId = session.customer as string;
@@ -68,7 +69,7 @@ export class StripeWebhookController {
     }
 
     if (event.type === 'customer.subscription.updated') {
-      const sub = event.data.object as Stripe.Subscription;
+      const sub = event.data.object as any;
       const priceId = sub.items.data[0].price.id;
       const plan = await this.prisma.plan.findFirst({ where: { stripePriceId: priceId } });
       if (!plan) return { received: true };
@@ -91,7 +92,7 @@ export class StripeWebhookController {
     }
 
     if (event.type === 'customer.subscription.deleted') {
-      const sub = event.data.object as Stripe.Subscription;
+      const sub = event.data.object as any;
       const existing = await this.prisma.subscription.findUnique({ where: { stripeSubId: sub.id } });
       if (existing) {
         await this.prisma.subscription.update({ where: { stripeSubId: sub.id }, data: { status: 'CANCELED' } });

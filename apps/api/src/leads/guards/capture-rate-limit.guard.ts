@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class CaptureRateLimitGuard implements CanActivate {
     const ipCount = await this.redis.incr(ipKey);
     if (ipCount === 1) await this.redis.expire(ipKey, this.IP_WINDOW_SECONDS);
     if (ipCount > this.IP_LIMIT) {
-      throw new TooManyRequestsException({ error: 'RATE_LIMIT_IP' });
+      throw new HttpException({ error: 'RATE_LIMIT_IP' }, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const hour = Math.floor(Date.now() / 3600000);
@@ -31,7 +31,7 @@ export class CaptureRateLimitGuard implements CanActivate {
     const orgCount = await this.redis.incr(orgKey);
     if (orgCount === 1) await this.redis.expire(orgKey, this.ORG_WINDOW_SECONDS);
     if (orgCount > this.ORG_LIMIT) {
-      throw new TooManyRequestsException({ error: 'RATE_LIMIT_ORG' });
+      throw new HttpException({ error: 'RATE_LIMIT_ORG' }, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     return true;

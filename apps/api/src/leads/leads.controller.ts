@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, UseInterceptors, UploadedFile,
+  UseGuards, UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
@@ -89,7 +89,8 @@ export class LeadsController {
   @UseGuards(PlanGuard)
   @CheckPlanLimit('leads')
   @UseInterceptors(FileInterceptor('file'))
-  async importCsv(@CurrentOrg() orgId: string, @UploadedFile() file: Express.Multer.File) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async importCsv(@CurrentOrg() orgId: string, @UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException({ error: 'VALIDATION_ERROR', message: 'CSV file required' });
     }
@@ -114,7 +115,7 @@ export class LeadsController {
     }
     return this.leadsService.importCsv(
       orgId,
-      allRows,
+      allRows as Array<{ name: string; email?: string; phone?: string; company?: string; notes?: string }>,
       () => this.subscriptionService.checkLimit(orgId, 'leads').then((r) => r.allowed),
     );
   }

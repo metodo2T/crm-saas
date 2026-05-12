@@ -15,7 +15,7 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   async log(params: AuditParams) {
-    return this.prisma.auditLog.create({ data: params });
+    return this.prisma.auditLog.create({ data: params as any });
   }
 
   async getLogs(organizationId: string, limit = 50) {
