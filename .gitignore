@@ -5,3 +5,9 @@ dist/
 .next/
 .superpowers/
 *.tsbuildinfo
+coverage/
+pnpm-debug.log*
+*.log
+out/
+.DS_Store
+Thumbs.db
