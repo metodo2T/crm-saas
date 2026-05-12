@@ -1,8 +1,10 @@
 import { auth } from '@clerk/nextjs/server';
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
+import Link from 'next/link';
 
 export default async function DashboardPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   await auth.protect();
+  const { orgSlug } = await params;
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,18 +17,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ orgS
       </header>
       <main className="p-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
-          Módulos de Leads, WhatsApp e Pipeline em breve.
-        </p>
         <div className="mt-6 grid grid-cols-3 gap-4">
+          <Link
+            href={`/${orgSlug}/leads`}
+            className="rounded-xl border bg-card p-5 hover:bg-accent transition-colors"
+          >
+            <p className="text-sm text-muted-foreground">Leads</p>
+            <p className="mt-1 text-3xl font-bold">—</p>
+            <p className="mt-1 text-xs text-blue-400">Abrir Lead Engine →</p>
+          </Link>
           {[
-            { title: 'Leads', value: '—', desc: 'Módulo Lead Engine (próximo)' },
-            { title: 'Conversas WhatsApp', value: '—', desc: 'Módulo WhatsApp Inbox (próximo)' },
-            { title: 'Deals no pipeline', value: '—', desc: 'Módulo Sales Pipeline (próximo)' },
+            { title: 'Conversas WhatsApp', desc: 'Módulo WhatsApp Inbox (próximo)' },
+            { title: 'Deals no pipeline', desc: 'Módulo Sales Pipeline (próximo)' },
           ].map((card) => (
             <div key={card.title} className="rounded-xl border bg-card p-5">
               <p className="text-sm text-muted-foreground">{card.title}</p>
-              <p className="mt-1 text-3xl font-bold">{card.value}</p>
+              <p className="mt-1 text-3xl font-bold">—</p>
               <p className="mt-1 text-xs text-muted-foreground">{card.desc}</p>
             </div>
           ))}
