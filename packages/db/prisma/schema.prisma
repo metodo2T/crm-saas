@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id           String               @id @default(uuid())
+  clerkOrgId   String               @unique
+  name         String
+  slug         String               @unique
+  logoUrl      String?
+  planId       String               // denormalizado de Subscription.planId
+  plan         Plan                 @relation(fields: [planId], references: [id])
+  members      OrganizationMember[]
+  subscription Subscription?
+  auditLogs    AuditLog[]
+  createdAt    DateTime             @default(now())
+
+  @@index([slug])
+}
+
+model User {
+  id          String               @id @default(uuid())
+  clerkUserId String               @unique
+  email       String
+  name        String
+  avatarUrl   String?
+  memberships OrganizationMember[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime             @default(now())
+}
+
+model OrganizationMember {
+  organizationId String
+  userId         String
+  role           OrgRole      @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, userId])
+}
+
+enum OrgRole {
+  ADMIN
+  MEMBER
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          PlanTier       @unique
+  stripePriceId String
+  maxUsers      Int
+  maxLeads      Int            // -1 = ilimitado
+  maxWhatsapp   Int            // -1 = ilimitado
+  features      Json
+  organizations Organization[]
+  subscriptions Subscription[]
+}
+
+enum PlanTier {
+  STARTER
+  PRO
+  AGENCY
+}
+
+model Subscription {
+  id               String             @id @default(uuid())
+  organizationId   String             @unique
+  planId           String
+  stripeSubId      String             @unique
+  stripeCustomerId String
+  status           SubscriptionStatus
+  currentPeriodEnd DateTime
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan             Plan               @relation(fields: [planId], references: [id])
+  updatedAt        DateTime           @updatedAt
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  action         String
+  resource       String
+  resourceId     String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+}
