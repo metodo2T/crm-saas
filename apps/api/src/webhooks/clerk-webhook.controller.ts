@@ -41,7 +41,7 @@ export class ClerkWebhookController {
 
     if (type === 'organization.created') {
       const starterPlan = await this.prisma.plan.findFirstOrThrow({ where: { name: 'STARTER' } });
-      await this.prisma.organization.upsert({
+      const org = await this.prisma.organization.upsert({
         where: { clerkOrgId: data.id },
         update: { name: data.name, slug: data.slug },
         create: {
@@ -49,6 +49,19 @@ export class ClerkWebhookController {
           name: data.name,
           slug: data.slug,
           planId: starterPlan.id,
+        },
+      });
+      // Auto-create a TRIALING subscription so PlanGuard works immediately
+      await this.prisma.subscription.upsert({
+        where: { organizationId: org.id },
+        update: {},
+        create: {
+          organizationId: org.id,
+          planId: starterPlan.id,
+          stripeSubId: `trial_${org.id}`,
+          stripeCustomerId: `trial_cus_${org.id}`,
+          status: 'TRIALING',
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
       });
     }

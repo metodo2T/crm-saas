@@ -21,7 +21,7 @@ export class SubscriptionService {
         where: { organizationId },
         include: { plan: true },
       });
-      if (!sub || sub.status !== 'ACTIVE') return { allowed: false };
+      if (!sub || (sub.status !== 'ACTIVE' && sub.status !== 'TRIALING')) return { allowed: false };
       planJson = JSON.stringify(sub.plan);
       await this.redis.set(cacheKey, planJson, 'EX', 300);
     }
