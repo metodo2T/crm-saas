@@ -12,14 +12,13 @@ model Organization {
   name         String
   slug         String               @unique
   logoUrl      String?
-  planId       String               // denormalizado de Subscription.planId
+  planId       String               // cache denormalizado — sempre atualizado em transação junto com Subscription
   plan         Plan                 @relation(fields: [planId], references: [id])
   members      OrganizationMember[]
   subscription Subscription?
   auditLogs    AuditLog[]
   createdAt    DateTime             @default(now())
-
-  @@index([slug])
+  updatedAt    DateTime             @updatedAt
 }
 
 model User {
@@ -31,6 +30,9 @@ model User {
   memberships OrganizationMember[]
   auditLogs   AuditLog[]
   createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([email])
 }
 
 model OrganizationMember {
@@ -42,6 +44,7 @@ model OrganizationMember {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([organizationId, userId])
+  @@index([userId])
 }
 
 enum OrgRole {
@@ -52,7 +55,7 @@ enum OrgRole {
 model Plan {
   id            String         @id @default(uuid())
   name          PlanTier       @unique
-  stripePriceId String
+  stripePriceId String         @unique
   maxUsers      Int
   maxLeads      Int            // -1 = ilimitado
   maxWhatsapp   Int            // -1 = ilimitado
@@ -72,12 +75,15 @@ model Subscription {
   organizationId   String             @unique
   planId           String
   stripeSubId      String             @unique
-  stripeCustomerId String
+  stripeCustomerId String             @unique
   status           SubscriptionStatus
   currentPeriodEnd DateTime
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan             Plan               @relation(fields: [planId], references: [id])
-  updatedAt        DateTime           @updatedAt
+
+  @@index([planId])
 }
 
 enum SubscriptionStatus {
@@ -90,14 +96,14 @@ enum SubscriptionStatus {
 model AuditLog {
   id             String       @id @default(uuid())
   organizationId String
-  userId         String
+  userId         String?
   action         String
   resource       String
   resourceId     String?
   metadata       Json?
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
 
   @@index([organizationId, createdAt])
 }
