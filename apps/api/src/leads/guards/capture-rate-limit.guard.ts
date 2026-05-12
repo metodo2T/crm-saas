@@ -3,6 +3,10 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class CaptureRateLimitGuard implements CanActivate {
+  private readonly IP_LIMIT = 10;
+  private readonly ORG_LIMIT = 100;
+  private readonly IP_WINDOW_SECONDS = 60;
+  private readonly ORG_WINDOW_SECONDS = 3600;
   private redis: Redis;
 
   constructor() {
@@ -17,16 +21,16 @@ export class CaptureRateLimitGuard implements CanActivate {
     const minute = Math.floor(Date.now() / 60000);
     const ipKey = `ratelimit:capture:ip:${ip}:${minute}`;
     const ipCount = await this.redis.incr(ipKey);
-    if (ipCount === 1) await this.redis.expire(ipKey, 60);
-    if (ipCount > 10) {
+    if (ipCount === 1) await this.redis.expire(ipKey, this.IP_WINDOW_SECONDS);
+    if (ipCount > this.IP_LIMIT) {
       throw new TooManyRequestsException({ error: 'RATE_LIMIT_IP' });
     }
 
     const hour = Math.floor(Date.now() / 3600000);
     const orgKey = `ratelimit:capture:org:${orgId}:${hour}`;
     const orgCount = await this.redis.incr(orgKey);
-    if (orgCount === 1) await this.redis.expire(orgKey, 3600);
-    if (orgCount > 100) {
+    if (orgCount === 1) await this.redis.expire(orgKey, this.ORG_WINDOW_SECONDS);
+    if (orgCount > this.ORG_LIMIT) {
       throw new TooManyRequestsException({ error: 'RATE_LIMIT_ORG' });
     }
 

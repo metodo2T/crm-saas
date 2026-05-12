@@ -1,6 +1,7 @@
-import { CaptureRateLimitGuard } from '../../src/leads/guards/capture-rate-limit.guard';
 import { ExecutionContext, TooManyRequestsException } from '@nestjs/common';
+import { CaptureRateLimitGuard } from '../../src/leads/guards/capture-rate-limit.guard';
 
+// Mock before importing guard to ensure it uses the mocked Redis
 const mockRedis = {
   incr: jest.fn(),
   expire: jest.fn(),
