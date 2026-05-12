@@ -53,6 +53,26 @@ services:
         condition: service_healthy
     networks:
       - internal
+      - easypanel
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+      # HTTP router (redirect to HTTPS)
+      - "traefik.http.routers.crm-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.crm-api.entrypoints=http"
+      - "traefik.http.routers.crm-api.middlewares=crm-https-redirect"
+      # HTTPS router
+      - "traefik.http.routers.crm-api-secure.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.crm-api-secure.entrypoints=https"
+      - "traefik.http.routers.crm-api-secure.tls=true"
+      - "traefik.http.routers.crm-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.crm-api-secure.middlewares=crm-api-strip"
+      # Strip /api prefix before forwarding
+      - "traefik.http.middlewares.crm-api-strip.stripprefix.prefixes=/api"
+      # HTTPS redirect middleware
+      - "traefik.http.middlewares.crm-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.crm-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.services.crm-api.loadbalancer.server.port=3001"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/ || exit 1"]
       interval: 15s
@@ -77,39 +97,27 @@ services:
         condition: service_healthy
     networks:
       - internal
-
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - letsencrypt:/etc/letsencrypt:ro
-      - certbot_www:/var/www/certbot:ro
-    depends_on:
-      - api
-      - web
-    networks:
-      - internal
-
-  # Não inicia com `docker compose up`. Usado via:
-  #   docker compose run --rm certbot certonly ...
-  #   docker compose run --rm certbot renew
-  certbot:
-    image: certbot/certbot:latest
-    profiles: ["tools"]
-    volumes:
-      - letsencrypt:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
+      - easypanel
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+      # HTTP router (redirect to HTTPS)
+      - "traefik.http.routers.crm-web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.crm-web.entrypoints=http"
+      - "traefik.http.routers.crm-web.middlewares=crm-https-redirect"
+      # HTTPS router
+      - "traefik.http.routers.crm-web-secure.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.crm-web-secure.entrypoints=https"
+      - "traefik.http.routers.crm-web-secure.tls=true"
+      - "traefik.http.routers.crm-web-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.crm-web.loadbalancer.server.port=3000"
 
 volumes:
   postgres_data:
   redis_data:
-  certbot_www:
-  letsencrypt:
 
 networks:
   internal:
     driver: bridge
+  easypanel:
+    external: true
