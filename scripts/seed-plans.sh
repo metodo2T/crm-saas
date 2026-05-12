@@ -17,7 +17,12 @@ docker compose exec -e STRIPE_PRICE_STARTER="$STRIPE_PRICE_STARTER" \
   -e STRIPE_PRICE_AGENCY="$STRIPE_PRICE_AGENCY" \
   api node -e "
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const plans = [
   {
     name: 'STARTER',
@@ -43,7 +48,7 @@ Promise.all(
     prisma.plan.upsert({ where: { name }, update: data, create: { name, ...data } })
       .then(() => console.log('✓ ' + name))
   )
-).then(() => prisma.\$disconnect()).catch(e => { console.error(e); process.exit(1); });
+).then(() => pool.end()).catch(e => { console.error(e); process.exit(1); });
 "
 
 echo "✓ Seed concluído."
