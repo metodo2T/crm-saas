@@ -2,6 +2,9 @@
   "name": "@crm/db",
   "version": "0.0.1",
   "main": "./index.ts",
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "scripts": {
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
