@@ -1,0 +1,84 @@
+import { Controller, Post, RawBodyRequest, Req, Body, BadRequestException } from '@nestjs/common';
+import { Request } from 'express';
+import { Webhook } from 'svix';
+import { UsersService } from '../users/users.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Controller('webhooks/clerk')
+export class ClerkWebhookController {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  @Post()
+  async handleClerkWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Body() _body: unknown,
+  ) {
+    const svixId = req.headers['svix-id'] as string;
+    const svixTimestamp = req.headers['svix-timestamp'] as string;
+    const svixSignature = req.headers['svix-signature'] as string;
+
+    const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+    let event: any;
+
+    try {
+      event = wh.verify(req.rawBody?.toString() ?? '', {
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': svixSignature,
+      });
+    } catch {
+      throw new BadRequestException('Invalid webhook signature');
+    }
+
+    const { type, data } = event;
+
+    if (type === 'user.created' || type === 'user.updated') {
+      await this.usersService.upsertFromClerk(data);
+    }
+
+    if (type === 'organization.created') {
+      const starterPlan = await this.prisma.plan.findFirstOrThrow({ where: { name: 'STARTER' } });
+      await this.prisma.organization.create({
+        data: {
+          clerkOrgId: data.id,
+          name: data.name,
+          slug: data.slug,
+          planId: starterPlan.id,
+        },
+      });
+    }
+
+    if (type === 'organizationMembership.created') {
+      const [org, user] = await Promise.all([
+        this.prisma.organization.findFirst({ where: { clerkOrgId: data.organization.id } }),
+        this.prisma.user.findUnique({ where: { clerkUserId: data.public_user_data.user_id } }),
+      ]);
+      if (org && user) {
+        await this.prisma.organizationMember.create({
+          data: {
+            organizationId: org.id,
+            userId: user.id,
+            role: data.role === 'org:admin' ? 'ADMIN' : 'MEMBER',
+          },
+        });
+      }
+    }
+
+    if (type === 'organizationMembership.deleted') {
+      const [org, user] = await Promise.all([
+        this.prisma.organization.findFirst({ where: { clerkOrgId: data.organization.id } }),
+        this.prisma.user.findUnique({ where: { clerkUserId: data.public_user_data.user_id } }),
+      ]);
+      if (org && user) {
+        await this.prisma.organizationMember.deleteMany({
+          where: { organizationId: org.id, userId: user.id },
+        });
+      }
+    }
+
+    return { received: true };
+  }
+}
