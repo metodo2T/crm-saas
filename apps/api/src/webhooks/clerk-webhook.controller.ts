@@ -13,7 +13,7 @@ export class ClerkWebhookController {
 
   @Post()
   async handleClerkWebhook(
-    @Req() req: RawBodyRequest<Request>,
+    @Req() req: any,
     @Body() _body: unknown,
   ) {
     const svixId = req.headers['svix-id'] as string;

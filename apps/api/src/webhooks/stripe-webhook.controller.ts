@@ -20,7 +20,7 @@ export class StripeWebhookController {
 
   @Post()
   async handleStripeWebhook(
-    @Req() req: RawBodyRequest<Request>,
+    @Req() req: any,
     @Headers('stripe-signature') sig: string,
   ) {
     let event: any;
