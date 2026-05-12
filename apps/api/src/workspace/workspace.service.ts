@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseService } from '../common/base.service';
 
@@ -27,13 +27,23 @@ export class WorkspaceService extends BaseService {
   async getMembers(organizationId: string) {
     return this.prisma.organizationMember.findMany({
       where: { organizationId },
-      include: { user: true },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+      },
     });
   }
 
-  async removeMember(organizationId: string, userId: string) {
+  async removeMember(organizationId: string, callerUserId: string, targetUserId: string) {
+    const callerMembership = await this.prisma.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId, userId: callerUserId } },
+    });
+    if (!callerMembership || callerMembership.role !== 'ADMIN') {
+      throw new ForbiddenException('Only admins can remove members');
+    }
     return this.prisma.organizationMember.delete({
-      where: { organizationId_userId: { organizationId, userId } },
+      where: { organizationId_userId: { organizationId, userId: targetUserId } },
     });
   }
 }

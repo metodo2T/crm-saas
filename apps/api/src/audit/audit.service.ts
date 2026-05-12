@@ -22,7 +22,7 @@ export class AuditService {
     return this.prisma.auditLog.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      take: Math.min(limit, 200),
       include: { user: { select: { name: true, avatarUrl: true } } },
     });
   }

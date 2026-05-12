@@ -8,7 +8,7 @@ jest.mock('svix');
 
 const mockUsersService = { upsertFromClerk: jest.fn() };
 const mockPrisma = {
-  organization: { create: jest.fn() },
+  organization: { upsert: jest.fn(), findFirst: jest.fn() },
   plan: { findFirstOrThrow: jest.fn() },
   organizationMember: { create: jest.fn(), deleteMany: jest.fn() },
   user: { findUnique: jest.fn() },

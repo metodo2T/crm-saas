@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SubscriptionService } from './subscription.service';
 import { CHECK_PLAN_LIMIT_KEY } from './check-plan-limit.decorator';
@@ -15,7 +15,8 @@ export class PlanGuard implements CanActivate {
     if (!resource) return true;
 
     const req = context.switchToHttp().getRequest();
-    const { organizationId } = req.auth;
+    const organizationId = req.auth?.organizationId;
+    if (!organizationId) throw new UnauthorizedException('Organization context required');
 
     const { allowed } = await this.subscriptionService.checkLimit(organizationId, resource as any);
     if (!allowed) {

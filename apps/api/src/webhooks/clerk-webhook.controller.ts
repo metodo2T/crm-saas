@@ -41,8 +41,10 @@ export class ClerkWebhookController {
 
     if (type === 'organization.created') {
       const starterPlan = await this.prisma.plan.findFirstOrThrow({ where: { name: 'STARTER' } });
-      await this.prisma.organization.create({
-        data: {
+      await this.prisma.organization.upsert({
+        where: { clerkOrgId: data.id },
+        update: { name: data.name, slug: data.slug },
+        create: {
           clerkOrgId: data.id,
           name: data.name,
           slug: data.slug,
@@ -56,15 +58,16 @@ export class ClerkWebhookController {
         this.prisma.organization.findFirst({ where: { clerkOrgId: data.organization.id } }),
         this.prisma.user.findUnique({ where: { clerkUserId: data.public_user_data.user_id } }),
       ]);
-      if (org && user) {
-        await this.prisma.organizationMember.create({
-          data: {
-            organizationId: org.id,
-            userId: user.id,
-            role: data.role === 'org:admin' ? 'ADMIN' : 'MEMBER',
-          },
-        });
+      if (!org || !user) {
+        throw new BadRequestException('Organization or user not found — will retry');
       }
+      await this.prisma.organizationMember.create({
+        data: {
+          organizationId: org.id,
+          userId: user.id,
+          role: data.role === 'org:admin' ? 'ADMIN' : 'MEMBER',
+        },
+      });
     }
 
     if (type === 'organizationMembership.deleted') {
@@ -72,11 +75,12 @@ export class ClerkWebhookController {
         this.prisma.organization.findFirst({ where: { clerkOrgId: data.organization.id } }),
         this.prisma.user.findUnique({ where: { clerkUserId: data.public_user_data.user_id } }),
       ]);
-      if (org && user) {
-        await this.prisma.organizationMember.deleteMany({
-          where: { organizationId: org.id, userId: user.id },
-        });
+      if (!org || !user) {
+        return { received: true };
       }
+      await this.prisma.organizationMember.deleteMany({
+        where: { organizationId: org.id, userId: user.id },
+      });
     }
 
     return { received: true };

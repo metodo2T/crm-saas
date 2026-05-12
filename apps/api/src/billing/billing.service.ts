@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface CheckoutParams {
   organizationId: string;
@@ -13,7 +14,7 @@ interface CheckoutParams {
 export class BillingService {
   private stripe: Stripe;
 
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder', {
       apiVersion: '2026-04-22.dahlia',
     });
@@ -38,5 +39,11 @@ export class BillingService {
       return_url: returnUrl,
     });
     return { url: session.url };
+  }
+
+  async getPortalSession(organizationId: string, returnUrl: string) {
+    const sub = await this.prisma.subscription.findUnique({ where: { organizationId } });
+    if (!sub) return { url: null };
+    return this.createPortalSession(sub.stripeCustomerId, returnUrl);
   }
 }
