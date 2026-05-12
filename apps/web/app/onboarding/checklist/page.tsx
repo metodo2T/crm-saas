@@ -12,10 +12,11 @@ const STEPS = [
 
 export default function OnboardingChecklistPage() {
   const router = useRouter();
-  const { organization } = useOrganization();
+  const { organization, isLoaded } = useOrganization();
 
   function goToDashboard() {
-    router.push(`/${organization?.slug}/dashboard`);
+    if (!organization?.slug) return;
+    router.push(`/${organization.slug}/dashboard`);
   }
 
   return (
@@ -37,7 +38,7 @@ export default function OnboardingChecklistPage() {
               </Button>
             </div>
           ))}
-          <Button className="mt-4 w-full" onClick={goToDashboard}>
+          <Button className="mt-4 w-full" onClick={goToDashboard} disabled={!isLoaded || !organization}>
             Ir para o dashboard →
           </Button>
         </CardContent>
