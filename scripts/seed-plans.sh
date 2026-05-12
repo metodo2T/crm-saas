@@ -12,7 +12,8 @@ fi
 
 echo "→ Inserindo planos no banco..."
 
-docker compose exec -e STRIPE_PRICE_STARTER="$STRIPE_PRICE_STARTER" \
+docker compose exec -w /app/apps/api \
+  -e STRIPE_PRICE_STARTER="$STRIPE_PRICE_STARTER" \
   -e STRIPE_PRICE_PRO="$STRIPE_PRICE_PRO" \
   -e STRIPE_PRICE_AGENCY="$STRIPE_PRICE_AGENCY" \
   api node -e "
