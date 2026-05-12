@@ -47,4 +47,4 @@ COPY apps/web/next.config.ts ./apps/web/
 COPY package.json ./
 
 EXPOSE 3000
-CMD ["sh", "-c", "cd apps/web && node ../../node_modules/.bin/next start"]
+CMD ["sh", "-c", "cd apps/web && node ./node_modules/.bin/next start"]
