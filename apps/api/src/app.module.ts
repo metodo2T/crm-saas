@@ -8,6 +8,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { BillingModule } from './billing/billing.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { AuditModule } from './audit/audit.module';
+import { LeadsModule } from './leads/leads.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuditModule } from './audit/audit.module';
     BillingModule,
     WebhooksModule,
     AuditModule,
+    LeadsModule,
   ],
 })
 export class AppModule {}
