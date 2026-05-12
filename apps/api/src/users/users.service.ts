@@ -14,7 +14,8 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsertFromClerk(data: ClerkUserData) {
-    const email = data.emailAddresses[0]?.emailAddress ?? '';
+    const email = data.emailAddresses[0]?.emailAddress;
+    if (!email) throw new Error(`Clerk user ${data.id} has no email address`);
     const name = [data.firstName, data.lastName].filter(Boolean).join(' ') || email;
 
     return this.prisma.user.upsert({

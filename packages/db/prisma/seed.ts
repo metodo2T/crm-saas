@@ -31,12 +31,13 @@ async function main() {
   ];
 
   for (const plan of plans) {
+    const { name, ...updateData } = plan;
     await prisma.plan.upsert({
-      where: { name: plan.name },
-      update: plan,
+      where: { name },
+      update: updateData,
       create: plan,
     });
-    console.log(`✓ Upserted plan: ${plan.name}`);
+    console.log(`✓ Upserted plan: ${name}`);
   }
 }
 

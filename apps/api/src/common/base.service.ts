@@ -5,7 +5,7 @@ export abstract class BaseService {
   constructor(protected readonly prisma: PrismaService) {}
 
   /** Returns where clause with required organizationId */
-  protected orgFilter(organizationId: string): { organizationId: string } {
+  protected orgFilter(organizationId: string | undefined): { organizationId: string } {
     if (!organizationId) throw new ForbiddenException('Organization context missing');
     return { organizationId };
   }

@@ -21,6 +21,11 @@ export class ClerkAuthGuard implements CanActivate {
         userId: payload.sub,
         organizationId: payload.org_id,
       };
+
+      if (!payload.org_id) {
+        throw new UnauthorizedException('Organization context required');
+      }
+
       return true;
     } catch {
       throw new UnauthorizedException('Invalid token');

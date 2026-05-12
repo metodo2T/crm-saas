@@ -28,6 +28,15 @@ describe('ClerkAuthGuard', () => {
     await expect(guard.canActivate(mockContext('Bearer bad-token'))).rejects.toThrow(UnauthorizedException);
   });
 
+  it('throws UnauthorizedException when token has no org_id', async () => {
+    jest.spyOn(clerkBackend, 'verifyToken').mockResolvedValueOnce({
+      sub: 'user_123',
+      org_id: undefined,
+    } as any);
+
+    await expect(guard.canActivate(mockContext('Bearer no-org-token'))).rejects.toThrow(UnauthorizedException);
+  });
+
   it('sets request.auth and returns true when token is valid', async () => {
     jest.spyOn(clerkBackend, 'verifyToken').mockResolvedValueOnce({
       sub: 'user_123',

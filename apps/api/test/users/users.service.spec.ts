@@ -24,6 +24,11 @@ describe('UsersService', () => {
   });
 
   describe('upsertFromClerk', () => {
+    it('throws when no email address provided', async () => {
+      const clerkData = { id: 'user_abc', emailAddresses: [], firstName: null, lastName: null, imageUrl: null };
+      await expect(service.upsertFromClerk(clerkData)).rejects.toThrow('has no email address');
+    });
+
     it('creates a new user with correct data', async () => {
       const clerkData = {
         id: 'user_abc',
