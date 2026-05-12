@@ -37,8 +37,9 @@ COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 # Copy compiled app
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Copy Prisma schema (needed by migrate deploy at startup)
+# Copy Prisma schema and config (needed by migrate deploy at startup)
 COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
+COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/
 
 # package.json files needed for module resolution
 COPY package.json ./
