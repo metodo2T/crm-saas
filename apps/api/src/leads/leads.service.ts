@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { BaseService } from '../common/base.service';
@@ -32,7 +33,7 @@ export class LeadsService extends BaseService {
   }) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
-    const where: any = { organizationId };
+    const where: Prisma.LeadWhereInput = { organizationId };
     if (query.status) where.status = query.status;
     if (query.source) where.source = query.source;
     if (query.assignedTo) where.assignedToId = query.assignedTo;
@@ -137,9 +138,7 @@ export class LeadsService extends BaseService {
       await this.prisma.lead.createMany({
         data: valid.map((r) => ({ ...r, organizationId, status: 'NOVO', source: 'CSV' })),
       });
-      for (let i = 0; i < valid.length; i++) {
-        await this.subscriptionService.incrementUsage(organizationId, 'leads');
-      }
+      await this.subscriptionService.incrementUsageBy(organizationId, 'leads', valid.length);
     }
     return { imported: valid.length, skipped: rows.length - valid.length - errors.length, errors };
   }

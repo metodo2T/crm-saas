@@ -50,6 +50,14 @@ export class SubscriptionService {
     await this.redis.expireat(usageKey, this.endOfMonthTimestamp());
   }
 
+  async incrementUsageBy(organizationId: string, resource: LimitResource, count: number) {
+    if (count <= 0) return;
+    const yearMonth = new Date().toISOString().slice(0, 7);
+    const usageKey = `usage:${resource}:${organizationId}:${yearMonth}`;
+    await this.redis.incrby(usageKey, count);
+    await this.redis.expireat(usageKey, this.endOfMonthTimestamp());
+  }
+
   async invalidatePlanCache(organizationId: string) {
     await this.redis.del(`plan:${organizationId}`);
   }
