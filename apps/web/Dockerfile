@@ -1,5 +1,5 @@
 # ── Stage 1: install & build ─────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -30,7 +30,7 @@ ENV NEXT_PUBLIC_STRIPE_PRICE_AGENCY=$NEXT_PUBLIC_STRIPE_PRICE_AGENCY
 RUN pnpm --filter=web build
 
 # ── Stage 2: production image ─────────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 ENV NODE_ENV=production
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
