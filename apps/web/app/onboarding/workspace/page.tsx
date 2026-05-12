@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function OnboardingWorkspacePage() {
-  const { createOrganization } = useOrganizationList();
+  const { createOrganization, setActive } = useOrganizationList();
   const router = useRouter();
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,8 @@ export default function OnboardingWorkspacePage() {
     if (!name.trim() || !createOrganization) return;
     setLoading(true);
     try {
-      await createOrganization({ name });
+      const org = await createOrganization({ name });
+      await setActive!({ organization: org.id });
       router.push('/onboarding/plan');
     } finally {
       setLoading(false);

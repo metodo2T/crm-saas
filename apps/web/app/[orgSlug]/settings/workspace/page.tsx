@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useOrganization } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,10 @@ export default function WorkspaceSettingsPage() {
   const { organization, isLoaded } = useOrganization();
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (organization?.name) setName(organization.name);
+  }, [organization?.name]);
 
   if (!isLoaded || !organization) return null;
 
@@ -35,7 +39,7 @@ export default function WorkspaceSettingsPage() {
               <Label htmlFor="orgName">Nome da agência</Label>
               <Input
                 id="orgName"
-                defaultValue={organization.name}
+                value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
