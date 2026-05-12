@@ -90,6 +90,9 @@ export class LeadsController {
   @CheckPlanLimit('leads')
   @UseInterceptors(FileInterceptor('file'))
   async importCsv(@CurrentOrg() orgId: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException({ error: 'VALIDATION_ERROR', message: 'CSV file required' });
+    }
     const content = file.buffer.toString('utf-8');
     const allRows = parse(content, {
       columns: (header: string[]) =>
