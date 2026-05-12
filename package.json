@@ -1,0 +1,12 @@
+{
+  "name": "crm-saas",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter=./apps/* dev",
+    "build": "pnpm --filter=./apps/* build",
+    "test": "pnpm --filter=./apps/* test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
