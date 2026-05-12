@@ -17,6 +17,7 @@ model Organization {
   members      OrganizationMember[]
   subscription Subscription?
   auditLogs    AuditLog[]
+  leads        Lead[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 }
@@ -29,6 +30,7 @@ model User {
   avatarUrl   String?
   memberships OrganizationMember[]
   auditLogs   AuditLog[]
+  leads       Lead[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
@@ -106,4 +108,49 @@ model AuditLog {
   user           User?        @relation(fields: [userId], references: [id])
 
   @@index([organizationId, createdAt])
+}
+
+model Lead {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String?
+  phone          String?
+  company        String?
+  notes          String?
+  status         LeadStatus   @default(NOVO)
+  source         LeadSource
+  assignedToId   String?
+  assignedTo     User?        @relation(fields: [assignedToId], references: [id])
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  fbclid         String?
+  gclid          String?
+  convertedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([organizationId, source])
+  @@index([assignedToId])
+}
+
+enum LeadStatus {
+  NOVO
+  CONTATADO
+  QUALIFICADO
+  CONVERTIDO
+  DESCARTADO
+}
+
+enum LeadSource {
+  MANUAL
+  FORM
+  CSV
+  WHATSAPP
 }
