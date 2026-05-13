@@ -1,11 +1,10 @@
 #!/bin/sh
 
-echo "==> DATABASE_URL set: $([ -n "$DATABASE_URL" ] && echo yes || echo NO)"
-echo "==> Working dir: $(pwd)"
-echo "==> Prisma binary: $(ls node_modules/.bin/prisma 2>/dev/null && echo found || echo NOT FOUND)"
+echo "==> ENV CHECK: DATABASE_URL=$([ -n "$DATABASE_URL" ] && echo 'SET' || echo 'MISSING')"
+echo "==> ENV CHECK: PORT=$PORT"
+echo "==> Checking dist/main.js..."
+ls -la apps/api/dist/main.js 2>&1 || echo "MISSING main.js!"
+echo "==> Node version: $(node --version)"
 
-echo "==> Attempting database schema sync..."
-node node_modules/.bin/prisma db push --skip-generate --accept-data-loss 2>&1 && echo "==> db push OK" || echo "==> WARNING: db push failed — continuing anyway"
-
-echo "==> Starting API server on port 3001..."
+echo "==> Starting API (no prisma push)..."
 exec node apps/api/dist/main.js
