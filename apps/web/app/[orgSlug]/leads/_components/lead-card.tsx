@@ -11,10 +11,10 @@ interface Props {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  MANUAL: 'bg-slate-700 text-slate-300',
-  CSV: 'bg-slate-700 text-slate-300',
-  FORM: 'bg-slate-700 text-slate-300',
-  WHATSAPP: 'bg-green-900 text-green-300',
+  MANUAL: 'bg-slate-100 text-slate-600',
+  CSV: 'bg-slate-100 text-slate-600',
+  FORM: 'bg-blue-50 text-blue-600',
+  WHATSAPP: 'bg-green-50 text-green-700',
 };
 
 export function LeadCard({ lead, onClick }: Props) {
@@ -39,24 +39,24 @@ export function LeadCard({ lead, onClick }: Props) {
       {...attributes}
       {...listeners}
       onClick={() => onClick(lead)}
-      className="bg-[#1a2236] border border-[#1e293b] rounded-lg p-3 cursor-pointer hover:border-slate-500 transition-colors"
+      className="bg-white border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
     >
-      <p className="text-sm font-semibold text-slate-100 mb-1">{lead.name}</p>
+      <p className="text-sm font-semibold text-slate-900 mb-1">{lead.name}</p>
       <div className="flex items-center gap-1.5 mb-2">
         <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${SOURCE_COLORS[lead.source]}`}>
           {lead.source}
         </span>
-        <span className="text-[10px] text-slate-500">{relativeTime}</span>
+        <span className="text-[10px] text-slate-400">{relativeTime}</span>
       </div>
       {lead.assignedTo ? (
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-[8px] text-white font-bold">
+          <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[8px] text-white font-bold">
             {lead.assignedTo.name[0].toUpperCase()}
           </div>
           <span className="text-[10px] text-slate-500">{lead.assignedTo.name}</span>
         </div>
       ) : (
-        <span className="text-[10px] text-slate-600">— sem responsável</span>
+        <span className="text-[10px] text-slate-400">sem responsável</span>
       )}
     </div>
   );

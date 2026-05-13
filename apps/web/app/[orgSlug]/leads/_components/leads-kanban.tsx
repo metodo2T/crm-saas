@@ -17,11 +17,11 @@ import { LeadCard } from './lead-card';
 import { LeadSlideOver } from './lead-slide-over';
 
 const COLUMNS: { key: LeadStatus; label: string; color: string; dot: string }[] = [
-  { key: 'NOVO', label: 'Novo', color: 'text-blue-400', dot: 'bg-blue-500' },
-  { key: 'CONTATADO', label: 'Contatado', color: 'text-amber-400', dot: 'bg-amber-500' },
-  { key: 'QUALIFICADO', label: 'Qualificado', color: 'text-violet-400', dot: 'bg-violet-500' },
-  { key: 'CONVERTIDO', label: 'Convertido', color: 'text-green-400', dot: 'bg-green-500' },
-  { key: 'DESCARTADO', label: 'Descartado', color: 'text-red-400', dot: 'bg-red-500' },
+  { key: 'NOVO', label: 'Novo', color: 'text-blue-700', dot: 'bg-blue-500' },
+  { key: 'CONTATADO', label: 'Contatado', color: 'text-amber-700', dot: 'bg-amber-500' },
+  { key: 'QUALIFICADO', label: 'Qualificado', color: 'text-violet-700', dot: 'bg-violet-500' },
+  { key: 'CONVERTIDO', label: 'Convertido', color: 'text-green-700', dot: 'bg-green-500' },
+  { key: 'DESCARTADO', label: 'Descartado', color: 'text-slate-500', dot: 'bg-slate-400' },
 ];
 
 export function LeadsKanban() {
@@ -91,7 +91,7 @@ export function LeadsKanban() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
         Carregando leads...
       </div>
     );
@@ -114,16 +114,16 @@ export function LeadsKanban() {
             return (
               <div
                 key={col.key}
-                className="bg-[#111827] border border-[#1e293b] rounded-xl overflow-hidden flex flex-col"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col"
               >
-                <div className="px-3 py-2.5 border-b border-[#1e293b] flex items-center justify-between shrink-0">
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className={`text-xs font-bold uppercase tracking-wide ${col.color}`}>
                       {col.label}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">
                     {leads.length}
                   </span>
                 </div>
@@ -132,7 +132,7 @@ export function LeadsKanban() {
                   strategy={verticalListSortingStrategy}
                   id={col.key}
                 >
-                  <div className="p-2 space-y-2 flex-1 overflow-y-auto min-h-[80px]">
+                  <div className="p-2 space-y-2 flex-1 overflow-y-auto min-h-[120px]">
                     {leads.map((lead) => (
                       <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} />
                     ))}
