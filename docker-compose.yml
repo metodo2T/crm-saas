@@ -53,7 +53,7 @@ services:
       CACHE_REDIS_URI: redis://default:${REDIS_PASSWORD}@redis:6379
       CACHE_REDIS_PREFIX_KEY: evolution
       CACHE_REDIS_SAVE_INSTANCES: "true"
-      LOG_LEVEL: ERROR
+      LOG_LEVEL: LOG
       DEL_INSTANCE: "false"
       QRCODE_LIMIT: "30"
     depends_on:
