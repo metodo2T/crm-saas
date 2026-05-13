@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Copy manifests first — better layer caching
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY prisma.config.ts ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/db/package.json ./packages/db/
 
