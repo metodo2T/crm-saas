@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Delete, Body, Param, UseGuards, HttpCode,
+  Controller, Get, Post, Delete, Body, Param, UseGuards, HttpCode, Logger,
 } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { CurrentOrg } from '../auth/decorators';
@@ -7,6 +7,7 @@ import { WhatsAppService } from './whatsapp.service';
 
 @Controller('whatsapp')
 export class WhatsAppController {
+  private readonly logger = new Logger(WhatsAppController.name);
   constructor(private readonly wa: WhatsAppService) {}
 
   @Get('instance')
@@ -17,12 +18,20 @@ export class WhatsAppController {
 
   @Post('instance')
   @UseGuards(ClerkAuthGuard)
-  saveInstance(
+  async saveInstance(
     @CurrentOrg() orgId: string,
     @Body('instanceId') instanceId: string,
     @Body('token') token: string,
   ) {
-    return this.wa.saveInstance(orgId, instanceId, token);
+    this.logger.log(`saveInstance org=${orgId} instanceId=${instanceId}`);
+    try {
+      const result = await this.wa.saveInstance(orgId, instanceId, token);
+      this.logger.log(`saveInstance success status=${result.status}`);
+      return result;
+    } catch (e) {
+      this.logger.error(`saveInstance error: ${e.message}`);
+      throw e;
+    }
   }
 
   @Post('instance/refresh')
