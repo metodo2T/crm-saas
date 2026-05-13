@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, UseInterceptors, UploadedFile, BadRequestException,
+  UseGuards, UseInterceptors, UploadedFile, BadRequestException, Res, StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { PlanGuard } from '../subscription/plan.guard';
 import { CheckPlanLimit } from '../subscription/check-plan-limit.decorator';
@@ -45,8 +46,36 @@ export class LeadsController {
   }
 
   @Get('analytics')
-  getAnalytics(@CurrentOrg() orgId: string) {
-    return this.leadsService.getAnalytics(orgId);
+  async getAnalytics(@CurrentOrg() orgId: string) {
+    const [summary, trend] = await Promise.all([
+      this.leadsService.getAnalytics(orgId),
+      this.leadsService.getAnalyticsTrend(orgId),
+    ]);
+    return { ...summary, trend };
+  }
+
+  @Get('export')
+  async exportCsv(
+    @CurrentOrg() orgId: string,
+    @Query('status') status?: string,
+    @Query('source') source?: string,
+    @Query('search') search?: string,
+    @Res({ passthrough: true }) res?: Response,
+  ): Promise<StreamableFile> {
+    const csv = await this.leadsService.exportCsv(orgId, { status, source, search });
+    const buffer = Buffer.from('﻿' + csv, 'utf-8');
+    const filename = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    res!.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res!.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return new StreamableFile(buffer);
+  }
+
+  @Patch('bulk')
+  bulkAction(
+    @CurrentOrg() orgId: string,
+    @Body() body: { ids: string[]; action: 'status' | 'delete'; status?: string },
+  ) {
+    return this.leadsService.bulkAction(orgId, body.ids, body.action, body.status);
   }
 
   @Get(':id')

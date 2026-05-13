@@ -5,14 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const STEPS = [
-  { label: 'Conectar WhatsApp', description: 'Vincule seu número para receber e enviar mensagens', href: null, comingSoon: true },
-  { label: 'Convidar time', description: 'Adicione membros ao seu workspace', href: '/settings/members', comingSoon: false },
-  { label: 'Adicionar primeiro lead', description: 'Importe ou cadastre manualmente', href: null, comingSoon: true },
+  { label: 'Conectar WhatsApp', description: 'Vincule seu número para receber e enviar mensagens', href: '/whatsapp' },
+  { label: 'Convidar time', description: 'Adicione membros ao seu workspace', href: '/settings/members' },
+  { label: 'Adicionar primeiro lead', description: 'Importe ou cadastre manualmente', href: '/leads' },
 ];
 
 export default function OnboardingChecklistPage() {
   const router = useRouter();
   const { organization, isLoaded } = useOrganization();
+
+  function goTo(href: string) {
+    if (!organization?.slug) return;
+    router.push(`/${organization.slug}${href}`);
+  }
 
   function goToDashboard() {
     if (!organization?.slug) return;
@@ -33,8 +38,13 @@ export default function OnboardingChecklistPage() {
                 <p className="text-sm font-medium">{step.label}</p>
                 <p className="text-xs text-muted-foreground">{step.description}</p>
               </div>
-              <Button variant="outline" size="sm" disabled={step.comingSoon}>
-                {step.comingSoon ? 'Em breve' : 'Configurar'}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!isLoaded || !organization}
+                onClick={() => goTo(step.href)}
+              >
+                Configurar
               </Button>
             </div>
           ))}

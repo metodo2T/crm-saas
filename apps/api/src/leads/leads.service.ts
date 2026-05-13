@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BaseService } from '../common/base.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -12,6 +13,7 @@ export class LeadsService extends BaseService {
   constructor(
     prisma: PrismaService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly notifications: NotificationsService,
   ) {
     super(prisma);
   }
@@ -24,7 +26,36 @@ export class LeadsService extends BaseService {
       data: { ...dto, organizationId, status: 'NOVO' },
     });
     await this.subscriptionService.incrementUsage(organizationId, 'leads');
+
+    if (dto.source === 'FORM' || dto.source === 'WHATSAPP') {
+      this.notifyLeadCreated(organizationId, lead).catch(() => null);
+    }
+
     return lead;
+  }
+
+  private async notifyLeadCreated(organizationId: string, lead: { name: string; email?: string | null; phone?: string | null; source: string }) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        members: {
+          where: { role: 'ADMIN' },
+          include: { user: { select: { email: true } } },
+          take: 5,
+        },
+      },
+    });
+    if (!org) return;
+    const adminEmails = org.members.map((m) => m.user.email).filter(Boolean) as string[];
+    await this.notifications.sendLeadCreated({
+      to: adminEmails,
+      leadName: lead.name,
+      orgName: org.name,
+      orgSlug: org.slug,
+      source: lead.source,
+      email: lead.email,
+      phone: lead.phone,
+    });
   }
 
   async findAll(organizationId: string, query: {
@@ -110,13 +141,98 @@ export class LeadsService extends BaseService {
   }
 
   async assign(organizationId: string, id: string, assignedToId: string | null) {
-    await this.findOne(organizationId, id);
-    return this.prisma.lead.update({ where: { id }, data: { assignedToId } });
+    const lead = await this.findOne(organizationId, id);
+    const updated = await this.prisma.lead.update({ where: { id }, data: { assignedToId } });
+
+    if (assignedToId) {
+      this.notifyLeadAssigned(organizationId, lead.name, assignedToId).catch(() => null);
+    }
+
+    return updated;
+  }
+
+  private async notifyLeadAssigned(organizationId: string, leadName: string, assignedToId: string) {
+    const [org, user] = await Promise.all([
+      this.prisma.organization.findUnique({ where: { id: organizationId }, select: { slug: true } }),
+      this.prisma.user.findUnique({ where: { id: assignedToId }, select: { email: true } }),
+    ]);
+    if (!org || !user) return;
+    await this.notifications.sendLeadAssigned({
+      to: user.email,
+      leadName,
+      orgSlug: org.slug,
+    });
   }
 
   async softDelete(organizationId: string, id: string) {
     await this.findOne(organizationId, id);
     return this.prisma.lead.update({ where: { id }, data: { status: 'DESCARTADO' } });
+  }
+
+  async exportCsv(organizationId: string, query: {
+    status?: string; source?: string; search?: string;
+  }): Promise<string> {
+    const where: Prisma.LeadWhereInput = { organizationId };
+    if (query.status) where.status = query.status as any;
+    if (query.source) where.source = query.source as any;
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    const leads = await this.prisma.lead.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { assignedTo: { select: { name: true } } },
+    });
+    const headers = ['Nome', 'Email', 'Telefone', 'Empresa', 'Status', 'Origem', 'Responsável', 'Criado em'];
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const rows = leads.map((l) => [
+      l.name, l.email ?? '', l.phone ?? '', l.company ?? '',
+      l.status, l.source, l.assignedTo?.name ?? '',
+      new Date(l.createdAt).toLocaleDateString('pt-BR'),
+    ].map(escape).join(','));
+    return [headers.map(escape).join(','), ...rows].join('\n');
+  }
+
+  async bulkAction(organizationId: string, ids: string[], action: 'status' | 'delete', status?: string) {
+    const count = await this.prisma.lead.count({ where: { id: { in: ids }, organizationId } });
+    if (count !== ids.length) throw new ForbiddenException('Some leads not found or do not belong to this org');
+    if (action === 'delete') {
+      await this.prisma.lead.updateMany({
+        where: { id: { in: ids }, organizationId },
+        data: { status: 'DESCARTADO' },
+      });
+    } else if (action === 'status' && status) {
+      const data: any = { status };
+      if (status === 'CONVERTIDO') data.convertedAt = new Date();
+      await this.prisma.lead.updateMany({
+        where: { id: { in: ids }, organizationId, NOT: { status: 'CONVERTIDO' } },
+        data,
+      });
+    }
+    return { updated: ids.length };
+  }
+
+  async getAnalyticsTrend(organizationId: string) {
+    const since = new Date();
+    since.setDate(since.getDate() - 29);
+    const leads = await this.prisma.lead.findMany({
+      where: { organizationId, createdAt: { gte: since } },
+      select: { createdAt: true },
+    });
+    const byDay: Record<string, number> = {};
+    for (let i = 0; i < 30; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - (29 - i));
+      byDay[d.toISOString().slice(0, 10)] = 0;
+    }
+    for (const lead of leads) {
+      const key = new Date(lead.createdAt).toISOString().slice(0, 10);
+      if (byDay[key] !== undefined) byDay[key]++;
+    }
+    return Object.entries(byDay).map(([date, total]) => ({ date, total }));
   }
 
   async importCsv(organizationId: string, rows: Array<{

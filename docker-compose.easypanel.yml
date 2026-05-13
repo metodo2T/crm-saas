@@ -1,0 +1,82 @@
+# docker-compose para Easypanel (usa Supabase + Upstash em vez de postgres/redis locais)
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO}
+      STRIPE_PRICE_AGENCY: ${STRIPE_PRICE_AGENCY}
+      ZAPI_CLIENT_TOKEN: ${ZAPI_CLIENT_TOKEN:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM_DOMAIN: ${EMAIL_FROM_DOMAIN:-}
+      WEB_URL: ${WEB_URL}
+      PORT: 3001
+    networks:
+      - easypanel
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+      - "traefik.http.routers.crm-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.crm-api.entrypoints=http"
+      - "traefik.http.routers.crm-api.middlewares=crm-https-redirect"
+      - "traefik.http.routers.crm-api-secure.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.crm-api-secure.entrypoints=https"
+      - "traefik.http.routers.crm-api-secure.tls=true"
+      - "traefik.http.routers.crm-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.crm-api-secure.middlewares=crm-api-strip"
+      - "traefik.http.middlewares.crm-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.crm-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.crm-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.services.crm-api.loadbalancer.server.port=3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+        NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: /onboarding/workspace
+        NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: /onboarding/workspace
+        NEXT_PUBLIC_STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER}
+        NEXT_PUBLIC_STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO}
+        NEXT_PUBLIC_STRIPE_PRICE_AGENCY: ${STRIPE_PRICE_AGENCY}
+    restart: unless-stopped
+    environment:
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - easypanel
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+      - "traefik.http.routers.crm-web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.crm-web.entrypoints=http"
+      - "traefik.http.routers.crm-web.middlewares=crm-https-redirect"
+      - "traefik.http.routers.crm-web-secure.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.crm-web-secure.entrypoints=https"
+      - "traefik.http.routers.crm-web-secure.tls=true"
+      - "traefik.http.routers.crm-web-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.crm-web.loadbalancer.server.port=3000"
+
+networks:
+  easypanel:
+    external: true

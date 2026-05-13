@@ -6,6 +6,7 @@ import { LeadsService } from './leads.service';
 import { AuthModule } from '../auth/auth.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     AuthModule,
     SubscriptionModule,
     PrismaModule,
+    NotificationsModule,
   ],
   controllers: [LeadsController, CaptureController],
   providers: [LeadsService],

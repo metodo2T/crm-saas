@@ -1,10 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "→ Running database migrations..."
-cd /app/packages/db
-../../apps/api/node_modules/.bin/prisma migrate deploy
-cd /app
+echo "==> Syncing database schema..."
+node node_modules/.bin/prisma db push --skip-generate --accept-data-loss
 
-echo "→ Starting API server..."
-exec node apps/api/dist/main
+echo "==> Starting API server on port 3001..."
+exec node apps/api/dist/main.js

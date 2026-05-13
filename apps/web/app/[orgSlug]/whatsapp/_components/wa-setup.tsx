@@ -92,7 +92,7 @@ export function WaSetup({ onConnected }: Props) {
         <p>3. Copie o <strong>Instance ID</strong> e o <strong>Instance Token</strong></p>
         <p>4. Em Configurações da instância, configure o webhook para:</p>
         <p className="font-mono text-xs bg-blue-100 px-2 py-1 rounded break-all">
-          https://srv1663592.hstgr.cloud/api/whatsapp/webhook
+          {process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/whatsapp/webhook
         </p>
         <p>5. Cole as credenciais abaixo e clique em Salvar</p>
       </div>

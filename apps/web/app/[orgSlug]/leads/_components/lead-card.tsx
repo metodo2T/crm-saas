@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 interface Props {
   lead: Lead;
   onClick: (lead: Lead) => void;
+  selected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
 }
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -17,9 +19,10 @@ const SOURCE_COLORS: Record<string, string> = {
   WHATSAPP: 'bg-green-50 text-green-700',
 };
 
-export function LeadCard({ lead, onClick }: Props) {
+export function LeadCard({ lead, onClick, selected = false, onSelect }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
+    disabled: !!onSelect,
   });
 
   const style = {
@@ -36,12 +39,28 @@ export function LeadCard({ lead, onClick }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onClick(lead)}
-      className="bg-white border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
+      {...(onSelect ? {} : { ...attributes, ...listeners })}
+      onClick={() => onSelect ? onSelect(lead.id, !selected) : onClick(lead)}
+      className={`relative bg-white border rounded-lg p-3 cursor-pointer transition-all ${
+        selected
+          ? 'border-blue-400 ring-2 ring-blue-100 shadow-sm'
+          : 'border-slate-200 hover:border-blue-300 hover:shadow-sm'
+      }`}
     >
-      <p className="text-sm font-semibold text-slate-900 mb-1">{lead.name}</p>
+      {onSelect && (
+        <div className="absolute top-2.5 right-2.5">
+          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+            selected ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'
+          }`}>
+            {selected && (
+              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+        </div>
+      )}
+      <p className={`text-sm font-semibold text-slate-900 mb-1 ${onSelect ? 'pr-6' : ''}`}>{lead.name}</p>
       <div className="flex items-center gap-1.5 mb-2">
         <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${SOURCE_COLORS[lead.source]}`}>
           {lead.source}

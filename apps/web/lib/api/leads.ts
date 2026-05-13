@@ -82,3 +82,42 @@ export async function importCsv(token: string, file: File): Promise<{ imported: 
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function exportLeadsCsv(token: string, filters?: { status?: string; source?: string }): Promise<void> {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.source) params.set('source', filters.source);
+  const res = await fetch(`${API}/leads/export?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Falha ao exportar');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function bulkAction(
+  token: string,
+  ids: string[],
+  action: 'status' | 'delete',
+  status?: LeadStatus,
+): Promise<{ updated: number }> {
+  return apiFetch('/leads/bulk', token, {
+    method: 'PATCH',
+    body: JSON.stringify({ ids, action, status }),
+  });
+}
+
+export interface AnalyticsTrend {
+  byStatus: Record<string, number>;
+  bySource: Record<string, number>;
+  trend: Array<{ date: string; total: number }>;
+}
+
+export async function getAnalytics(token: string): Promise<AnalyticsTrend> {
+  return apiFetch('/leads/analytics', token);
+}
