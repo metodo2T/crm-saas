@@ -148,6 +148,7 @@ model WhatsAppInstance {
   organizationId String            @unique
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   instanceName   String            @unique
+  token          String?
   status         WaInstanceStatus  @default(DISCONNECTED)
   phone          String?
   messages       WhatsAppMessage[]

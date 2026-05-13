@@ -7,6 +7,7 @@ export interface WaInstance {
   id: string;
   organizationId: string;
   instanceName: string;
+  token: string | null;
   status: WaInstanceStatus;
   phone: string | null;
   createdAt: string;
@@ -51,15 +52,22 @@ export async function getWaInstance(token: string): Promise<WaInstance | null> {
   }
 }
 
-export async function createWaInstance(token: string): Promise<WaInstance> {
-  return apiFetch('/whatsapp/instance', token, { method: 'POST' });
+export async function saveWaInstance(token: string, instanceId: string, instanceToken: string): Promise<WaInstance> {
+  return apiFetch('/whatsapp/instance', token, {
+    method: 'POST',
+    body: JSON.stringify({ instanceId, token: instanceToken }),
+  });
+}
+
+export async function refreshWaStatus(token: string): Promise<WaInstance> {
+  return apiFetch('/whatsapp/instance/refresh', token, { method: 'POST' });
 }
 
 export async function deleteWaInstance(token: string): Promise<void> {
   await apiFetch('/whatsapp/instance', token, { method: 'DELETE' });
 }
 
-export async function getWaQrCode(token: string): Promise<{ qrcode: string }> {
+export async function getWaQrCode(token: string): Promise<{ base64?: string }> {
   return apiFetch('/whatsapp/instance/qr', token);
 }
 

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 
+const ZAPI_BASE = 'https://api.z-api.io';
+
 @Injectable()
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
@@ -11,27 +13,38 @@ export class WhatsAppService {
     private readonly config: ConfigService,
   ) {}
 
-  private get evolutionUrl(): string {
-    return this.config.get<string>('EVOLUTION_API_URL', 'http://evolution:8080');
+  private get clientToken(): string {
+    return this.config.get<string>('ZAPI_CLIENT_TOKEN', '');
   }
 
-  private get evolutionKey(): string {
-    return this.config.get<string>('EVOLUTION_API_KEY', '');
+  private zapiUrl(instanceId: string, token: string, path: string): string {
+    return `${ZAPI_BASE}/instances/${instanceId}/token/${token}${path}`;
   }
 
-  private async evoFetch(path: string, options: RequestInit = {}): Promise<unknown> {
-    const url = `${this.evolutionUrl}${path}`;
+  private async zapiGet(instanceId: string, token: string, path: string): Promise<unknown> {
+    const url = this.zapiUrl(instanceId, token, path);
     const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: this.evolutionKey,
-        ...(options.headers ?? {}),
-      },
+      headers: { 'Client-Token': this.clientToken },
+    });
+    const contentType = res.headers.get('content-type') ?? '';
+    if (contentType.includes('image')) {
+      const buf = await res.arrayBuffer();
+      return { base64: `data:image/png;base64,${Buffer.from(buf).toString('base64')}` };
+    }
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { raw: text }; }
+  }
+
+  private async zapiPost(instanceId: string, token: string, path: string, body: unknown): Promise<unknown> {
+    const url = this.zapiUrl(instanceId, token, path);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Client-Token': this.clientToken },
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new BadRequestException(`Evolution API error ${res.status}: ${text}`);
+      throw new BadRequestException(`Z-API error ${res.status}: ${text}`);
     }
     return res.json();
   }
@@ -40,47 +53,36 @@ export class WhatsAppService {
     return this.prisma.whatsAppInstance.findUnique({ where: { organizationId } });
   }
 
-  async createInstance(organizationId: string) {
-    const existing = await this.getInstance(organizationId);
-    if (existing) return existing;
+  async saveInstance(organizationId: string, instanceId: string, token: string) {
+    const status = await this.fetchRemoteStatus(instanceId, token);
+    const waStatus = status.connected ? 'CONNECTED' : 'DISCONNECTED';
+    const phone = status.connectedPhone ?? null;
 
-    const instanceName = `org_${organizationId.replace(/-/g, '').slice(0, 16)}`;
-
-    await this.evoFetch('/instance/create', {
-      method: 'POST',
-      body: JSON.stringify({
-        instanceName,
-        qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
-        webhook: {
-          url: `${this.config.get('API_URL', 'http://api:3001')}/whatsapp/webhook`,
-          byEvents: false,
-          base64: false,
-          events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
-        },
-      }),
+    return this.prisma.whatsAppInstance.upsert({
+      where: { organizationId },
+      update: { instanceName: instanceId, token, status: waStatus, phone },
+      create: { organizationId, instanceName: instanceId, token, status: waStatus, phone },
     });
+  }
 
-    return this.prisma.whatsAppInstance.create({
-      data: { organizationId, instanceName, status: 'CONNECTING' },
+  async refreshStatus(organizationId: string) {
+    const instance = await this.getOrFail(organizationId);
+    const status = await this.fetchRemoteStatus(instance.instanceName, instance.token!);
+    const waStatus = status.connected ? 'CONNECTED' : 'DISCONNECTED';
+    return this.prisma.whatsAppInstance.update({
+      where: { organizationId },
+      data: { status: waStatus, phone: status.connectedPhone ?? instance.phone },
     });
   }
 
   async getQrCode(organizationId: string) {
     const instance = await this.getOrFail(organizationId);
-    const data = await this.evoFetch(`/instance/connect/${instance.instanceName}`) as Record<string, unknown>;
-    return { qrcode: data.qrcode ?? data.base64 ?? data.code };
+    const data = await this.zapiGet(instance.instanceName, instance.token!, '/qr-code/image') as Record<string, unknown>;
+    return data;
   }
 
   async deleteInstance(organizationId: string) {
-    const instance = await this.getInstance(organizationId);
-    if (!instance) return;
-    try {
-      await this.evoFetch(`/instance/delete/${instance.instanceName}`, { method: 'DELETE' });
-    } catch (e) {
-      this.logger.warn(`Could not delete Evolution instance: ${e}`);
-    }
-    await this.prisma.whatsAppInstance.delete({ where: { organizationId } });
+    await this.prisma.whatsAppInstance.delete({ where: { organizationId } }).catch(() => null);
   }
 
   async getConversations(organizationId: string) {
@@ -109,8 +111,9 @@ export class WhatsAppService {
           unread: 0,
         });
       }
-      const conv = convMap.get(msg.remoteJid)!;
-      if (!msg.fromMe && msg.status === 'SENT') conv.unread++;
+      if (!msg.fromMe && msg.status === 'SENT') {
+        convMap.get(msg.remoteJid)!.unread++;
+      }
     }
 
     return Array.from(convMap.values());
@@ -125,30 +128,32 @@ export class WhatsAppService {
     });
   }
 
-  async sendMessage(organizationId: string, remoteJid: string, text: string) {
+  async sendMessage(organizationId: string, phone: string, text: string) {
     const instance = await this.getOrFail(organizationId);
     if (instance.status !== 'CONNECTED') {
       throw new BadRequestException('WhatsApp not connected');
     }
 
-    const data = await this.evoFetch(`/message/sendText/${instance.instanceName}`, {
-      method: 'POST',
-      body: JSON.stringify({ number: remoteJid, text }),
+    const cleanPhone = phone.replace(/\D/g, '');
+    const data = await this.zapiPost(instance.instanceName, instance.token!, '/send-text', {
+      phone: cleanPhone,
+      message: text,
     }) as Record<string, unknown>;
 
-    const msgId = (data as any)?.key?.id ?? `manual_${Date.now()}`;
+    const msgId = (data as any)?.zaapId ?? (data as any)?.messageId ?? `manual_${Date.now()}`;
+    const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+
     const lead = await this.prisma.lead.findFirst({
       where: {
         organizationId,
-        OR: [
-          { phone: remoteJid.split('@')[0] },
-          { phone: `+${remoteJid.split('@')[0]}` },
-        ],
+        OR: [{ phone: cleanPhone }, { phone: `+${cleanPhone}` }],
       },
     });
 
-    return this.prisma.whatsAppMessage.create({
-      data: {
+    return this.prisma.whatsAppMessage.upsert({
+      where: { messageId: msgId },
+      update: {},
+      create: {
         instanceId: instance.id,
         leadId: lead?.id ?? null,
         remoteJid,
@@ -162,85 +167,96 @@ export class WhatsAppService {
   }
 
   async handleWebhook(payload: Record<string, unknown>) {
-    const event = payload.event as string;
-    const instanceName = payload.instance as string;
+    const instanceId = payload.instanceId as string;
+    if (!instanceId) return;
 
-    const instance = await this.prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+    const instance = await this.prisma.whatsAppInstance.findUnique({
+      where: { instanceName: instanceId },
+    });
     if (!instance) return;
 
-    if (event === 'connection.update') {
-      const state = (payload.data as any)?.state as string;
-      const statusMap: Record<string, 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED'> = {
-        open: 'CONNECTED',
-        connecting: 'CONNECTING',
-        close: 'DISCONNECTED',
-      };
-      const newStatus = statusMap[state];
-      if (newStatus) {
-        const phone = (payload.data as any)?.me?.id?.split('@')[0] ?? null;
-        await this.prisma.whatsAppInstance.update({
-          where: { id: instance.id },
-          data: { status: newStatus, ...(phone ? { phone } : {}) },
-        });
-      }
+    // Connection status update
+    if ('connected' in payload) {
+      const connected = payload.connected as boolean;
+      const phone = (payload.connectedPhone as string) ?? instance.phone;
+      await this.prisma.whatsAppInstance.update({
+        where: { id: instance.id },
+        data: {
+          status: connected ? 'CONNECTED' : 'DISCONNECTED',
+          ...(phone ? { phone } : {}),
+        },
+      });
       return;
     }
 
-    if (event === 'messages.upsert') {
-      const messages = (payload.data as any)?.messages as Array<Record<string, unknown>> ?? [];
-      for (const msg of messages) {
-        const key = msg.key as any;
-        const messageId = key?.id as string;
-        if (!messageId) continue;
+    // Incoming/outgoing message
+    const messageId = payload.messageId as string;
+    if (!messageId) return;
 
-        const remoteJid = key?.remoteJid as string;
-        const fromMe = key?.fromMe as boolean ?? false;
-        const body =
-          (msg.message as any)?.conversation ??
-          (msg.message as any)?.extendedTextMessage?.text ?? '';
-        const timestamp = new Date(((msg.messageTimestamp as number) ?? Date.now() / 1000) * 1000);
+    const type = payload.type as string;
+    const isText = type === 'TEXT' || type === 'text';
+    if (!isText) return;
 
-        const phone = remoteJid?.split('@')[0];
-        let lead = await this.prisma.lead.findFirst({
-          where: {
-            organizationId: instance.organizationId,
-            OR: [{ phone }, { phone: `+${phone}` }],
-          },
-        });
+    const body = (payload.text as any)?.message ?? (payload.text as string) ?? '';
+    const fromMe = payload.fromMe as boolean ?? false;
+    const phone = payload.phone as string;
+    if (!phone) return;
 
-        if (!lead && !fromMe && body) {
-          lead = await this.prisma.lead.create({
-            data: {
-              organizationId: instance.organizationId,
-              name: phone,
-              phone,
-              source: 'WHATSAPP',
-              status: 'NOVO',
-            },
-          });
-        }
+    const cleanPhone = phone.replace(/\D/g, '');
+    const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+    const timestamp = new Date((payload.momment as number) ?? Date.now());
+    const senderName = (payload.senderName as string) ?? (payload.chatName as string) ?? cleanPhone;
 
-        await this.prisma.whatsAppMessage.upsert({
-          where: { messageId },
-          update: {},
-          create: {
-            instanceId: instance.id,
-            leadId: lead?.id ?? null,
-            remoteJid,
-            fromMe,
-            body,
-            messageId,
-            status: fromMe ? 'SENT' : 'SENT',
-            timestamp,
-          },
-        });
-      }
+    let lead = await this.prisma.lead.findFirst({
+      where: {
+        organizationId: instance.organizationId,
+        OR: [{ phone: cleanPhone }, { phone: `+${cleanPhone}` }],
+      },
+    });
+
+    if (!lead && !fromMe && body) {
+      lead = await this.prisma.lead.create({
+        data: {
+          organizationId: instance.organizationId,
+          name: senderName,
+          phone: cleanPhone,
+          source: 'WHATSAPP',
+          status: 'NOVO',
+        },
+      });
+    }
+
+    await this.prisma.whatsAppMessage.upsert({
+      where: { messageId },
+      update: {},
+      create: {
+        instanceId: instance.id,
+        leadId: lead?.id ?? null,
+        remoteJid,
+        fromMe,
+        body,
+        messageId,
+        status: 'SENT',
+        timestamp,
+      },
+    });
+  }
+
+  private async fetchRemoteStatus(instanceId: string, token: string): Promise<{ connected: boolean; connectedPhone?: string }> {
+    try {
+      const data = await this.zapiGet(instanceId, token, '/status') as Record<string, unknown>;
+      return {
+        connected: data.connected === true,
+        connectedPhone: data.connectedPhone as string | undefined,
+      };
+    } catch {
+      return { connected: false };
     }
   }
 
   private async getOrFail(organizationId: string) {
     const instance = await this.getInstance(organizationId);
-    if (!instance) throw new NotFoundException('WhatsApp instance not found');
+    if (!instance || !instance.token) throw new NotFoundException('WhatsApp instance not configured');
     return instance;
   }
 }

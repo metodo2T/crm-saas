@@ -9,8 +9,6 @@ import { WhatsAppService } from './whatsapp.service';
 export class WhatsAppController {
   constructor(private readonly wa: WhatsAppService) {}
 
-  // --- Instance management (authenticated) ---
-
   @Get('instance')
   @UseGuards(ClerkAuthGuard)
   getInstance(@CurrentOrg() orgId: string) {
@@ -19,8 +17,18 @@ export class WhatsAppController {
 
   @Post('instance')
   @UseGuards(ClerkAuthGuard)
-  createInstance(@CurrentOrg() orgId: string) {
-    return this.wa.createInstance(orgId);
+  saveInstance(
+    @CurrentOrg() orgId: string,
+    @Body('instanceId') instanceId: string,
+    @Body('token') token: string,
+  ) {
+    return this.wa.saveInstance(orgId, instanceId, token);
+  }
+
+  @Post('instance/refresh')
+  @UseGuards(ClerkAuthGuard)
+  refreshStatus(@CurrentOrg() orgId: string) {
+    return this.wa.refreshStatus(orgId);
   }
 
   @Get('instance/qr')
@@ -34,8 +42,6 @@ export class WhatsAppController {
   deleteInstance(@CurrentOrg() orgId: string) {
     return this.wa.deleteInstance(orgId);
   }
-
-  // --- Conversations (authenticated) ---
 
   @Get('conversations')
   @UseGuards(ClerkAuthGuard)
@@ -56,10 +62,9 @@ export class WhatsAppController {
     @Param('jid') jid: string,
     @Body('text') text: string,
   ) {
-    return this.wa.sendMessage(orgId, decodeURIComponent(jid), text);
+    const phone = decodeURIComponent(jid).split('@')[0];
+    return this.wa.sendMessage(orgId, phone, text);
   }
-
-  // --- Webhook (public, called by Evolution API) ---
 
   @Post('webhook')
   @HttpCode(200)
