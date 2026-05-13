@@ -17,17 +17,18 @@ export class ClerkAuthGuard implements CanActivate {
       const payload = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY!,
       });
-      request.auth = {
-        userId: payload.sub,
-        organizationId: payload.org_id,
-      };
-
-      if (!payload.org_id) {
+      // Clerk v2 tokens store org info under `o.id`; v1 used `org_id`
+      const orgId = (payload as any).o?.id ?? (payload as any).org_id;
+      if (!orgId) {
         throw new UnauthorizedException('Organization context required');
       }
-
+      request.auth = {
+        userId: payload.sub,
+        organizationId: orgId,
+      };
       return true;
-    } catch {
+    } catch (e) {
+      if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Invalid token');
     }
   }
