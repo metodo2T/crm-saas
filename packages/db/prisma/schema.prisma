@@ -8,19 +8,20 @@ datasource db {
 }
 
 model Organization {
-  id           String               @id @default(uuid())
-  clerkOrgId   String               @unique
-  name         String
-  slug         String               @unique
-  logoUrl      String?
-  planId       String               // cache denormalizado — sempre atualizado em transação junto com Subscription
-  plan         Plan                 @relation(fields: [planId], references: [id])
-  members      OrganizationMember[]
-  subscription Subscription?
-  auditLogs    AuditLog[]
-  leads        Lead[]
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id              String               @id @default(uuid())
+  clerkOrgId      String               @unique
+  name            String
+  slug            String               @unique
+  logoUrl         String?
+  planId          String
+  plan            Plan                 @relation(fields: [planId], references: [id])
+  members         OrganizationMember[]
+  subscription    Subscription?
+  auditLogs       AuditLog[]
+  leads           Lead[]
+  whatsappInstance WhatsAppInstance?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 model User {
@@ -112,33 +113,70 @@ model AuditLog {
 }
 
 model Lead {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  email          String?
-  phone          String?
-  company        String?
-  notes          String?
-  status         LeadStatus   @default(NOVO)
-  source         LeadSource
-  assignedToId   String?
-  assignedTo     User?        @relation(fields: [assignedToId], references: [id])
-  utmSource      String?
-  utmMedium      String?
-  utmCampaign    String?
-  utmContent     String?
-  utmTerm        String?
-  fbclid         String?
-  gclid          String?
-  convertedAt    DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id               String            @id @default(uuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name             String
+  email            String?
+  phone            String?
+  company          String?
+  notes            String?
+  status           LeadStatus        @default(NOVO)
+  source           LeadSource
+  assignedToId     String?
+  assignedTo       User?             @relation(fields: [assignedToId], references: [id])
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmContent       String?
+  utmTerm          String?
+  fbclid           String?
+  gclid            String?
+  convertedAt      DateTime?
+  whatsappMessages WhatsAppMessage[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
   @@index([organizationId, source])
   @@index([assignedToId])
+}
+
+model WhatsAppInstance {
+  id             String            @id @default(uuid())
+  organizationId String            @unique
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instanceName   String            @unique
+  status         WaInstanceStatus  @default(DISCONNECTED)
+  phone          String?
+  messages       WhatsAppMessage[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+enum WaInstanceStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+}
+
+model WhatsAppMessage {
+  id          String           @id @default(uuid())
+  instanceId  String
+  instance    WhatsAppInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?            @relation(fields: [leadId], references: [id])
+  remoteJid   String
+  fromMe      Boolean          @default(false)
+  body        String
+  messageId   String           @unique
+  status      WaMsgStatus      @default(SENT)
+  timestamp   DateTime
+  createdAt   DateTime         @default(now())
+
+  @@index([instanceId, remoteJid, timestamp])
+  @@index([leadId])
 }
 
 enum LeadStatus {
@@ -154,4 +192,10 @@ enum LeadSource {
   FORM
   CSV
   WHATSAPP
+}
+
+enum WaMsgStatus {
+  SENT
+  DELIVERED
+  READ
 }
