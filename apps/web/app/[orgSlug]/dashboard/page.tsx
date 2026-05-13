@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth, useOrganization } from '@clerk/nextjs';
-import { getKanban, KanbanData, LeadStatus } from '@/lib/api/leads';
+import { getKanban, KanbanData, Lead, LeadStatus } from '@/lib/api/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -29,7 +29,7 @@ export default function DashboardPage() {
     enabled: !!organization?.id,
   });
 
-  const allLeads = data ? Object.values(data).flat() : [];
+  const allLeads: Lead[] = data ? (Object.values(data).flat() as Lead[]) : [];
   const total = allLeads.length;
   const converted = data?.CONVERTIDO.length ?? 0;
   const discarded = data?.DESCARTADO.length ?? 0;
