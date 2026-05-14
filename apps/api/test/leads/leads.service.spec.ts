@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { LeadsService } from '../../src/leads/leads.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { SubscriptionService } from '../../src/subscription/subscription.service';
+import { NotificationsService } from '../../src/notifications/notifications.service';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 
 const mockPrisma = {
@@ -14,11 +15,19 @@ const mockPrisma = {
     createMany: jest.fn(),
     groupBy: jest.fn(),
   },
+  organization: { findUnique: jest.fn() },
+  user: { findUnique: jest.fn() },
 };
 
 const mockSubscription = {
   checkLimit: jest.fn(),
   incrementUsage: jest.fn(),
+  incrementUsageBy: jest.fn(),
+};
+
+const mockNotifications = {
+  sendLeadCreated: jest.fn(),
+  sendLeadAssigned: jest.fn(),
 };
 
 describe('LeadsService', () => {
@@ -30,6 +39,7 @@ describe('LeadsService', () => {
         LeadsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: SubscriptionService, useValue: mockSubscription },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
     service = module.get(LeadsService);
