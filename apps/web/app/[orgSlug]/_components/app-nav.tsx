@@ -6,6 +6,7 @@ import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 const NAV = [
   { label: 'Dashboard', seg: 'dashboard' },
   { label: 'Leads', seg: 'leads' },
+  { label: 'Pipeline', seg: 'pipeline' },
   { label: 'WhatsApp', seg: 'whatsapp' },
   { label: 'Configurações', seg: 'settings' },
 ];
