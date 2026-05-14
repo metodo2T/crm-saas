@@ -1,11 +1,16 @@
 'use client';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth, useOrganization } from '@clerk/nextjs';
 import { getKanban } from '@/lib/api/pipeline';
 import { PipelineHeader } from './_components/pipeline-header';
-import { PipelineKanban } from './_components/pipeline-kanban';
 import { NewDealSheet } from './_components/new-deal-sheet';
+
+const PipelineKanban = dynamic(
+  () => import('./_components/pipeline-kanban').then((m) => m.PipelineKanban),
+  { ssr: false }
+);
 
 export default function PipelinePage() {
   const [newDealOpen, setNewDealOpen] = useState(false);
