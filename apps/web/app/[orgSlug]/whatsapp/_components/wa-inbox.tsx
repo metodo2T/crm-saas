@@ -9,6 +9,7 @@ import {
   WaConversation, WaMessage, WaInstance,
 } from '@/lib/api/whatsapp';
 import { Button } from '@/components/ui/button';
+import { WaLeadPanel } from './wa-lead-panel';
 
 interface Props {
   instance: WaInstance;
@@ -198,6 +199,17 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
           </>
         )}
       </main>
+
+      {/* Lead panel — only visible when a conversation is selected */}
+      {selectedJid && (
+        <WaLeadPanel
+          jid={selectedJid}
+          lead={selectedConv?.lead ?? null}
+          onLinkChange={() =>
+            queryClient.invalidateQueries({ queryKey: ['wa', 'conversations', organization?.id] })
+          }
+        />
+      )}
     </div>
   );
 }
