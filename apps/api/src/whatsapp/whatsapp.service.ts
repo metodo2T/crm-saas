@@ -90,12 +90,12 @@ export class WhatsAppService {
     const messages = await this.prisma.whatsAppMessage.findMany({
       where: { instanceId: instance.id },
       orderBy: { timestamp: 'desc' },
-      include: { lead: { select: { id: true, name: true, phone: true } } },
+      include: { lead: { select: { id: true, name: true, phone: true, email: true, status: true } } },
     });
 
     const convMap = new Map<string, {
       remoteJid: string;
-      lead: { id: string; name: string; phone: string | null } | null;
+      lead: { id: string; name: string; phone: string | null; email: string | null; status: string } | null;
       lastMessage: string;
       lastTimestamp: Date;
       unread: number;
@@ -240,6 +240,27 @@ export class WhatsAppService {
         timestamp,
       },
     });
+  }
+
+  async linkLead(
+    organizationId: string,
+    remoteJid: string,
+    leadId: string | null,
+  ): Promise<{ lead: { id: string; name: string; email: string | null; phone: string | null; status: string; source: string } | null }> {
+    const instance = await this.getOrFail(organizationId);
+
+    let lead = null;
+    if (leadId !== null) {
+      lead = await this.prisma.lead.findFirst({ where: { id: leadId, organizationId } });
+      if (!lead) throw new NotFoundException('Lead not found');
+    }
+
+    await this.prisma.whatsAppMessage.updateMany({
+      where: { instanceId: instance.id, remoteJid },
+      data: { leadId },
+    });
+
+    return { lead };
   }
 
   private async fetchRemoteStatus(instanceId: string, token: string): Promise<{ connected: boolean; connectedPhone?: string }> {

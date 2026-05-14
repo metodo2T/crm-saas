@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Delete, Body, Param, UseGuards, HttpCode, Logger,
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, HttpCode, Logger,
 } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { CurrentOrg } from '../auth/decorators';
@@ -73,6 +73,16 @@ export class WhatsAppController {
   ) {
     const phone = decodeURIComponent(jid).split('@')[0];
     return this.wa.sendMessage(orgId, phone, text);
+  }
+
+  @Patch('conversations/:jid/lead')
+  @UseGuards(ClerkAuthGuard)
+  linkLead(
+    @CurrentOrg() orgId: string,
+    @Param('jid') jid: string,
+    @Body('leadId') leadId: string | null,
+  ) {
+    return this.wa.linkLead(orgId, decodeURIComponent(jid), leadId ?? null);
   }
 
   @Post('webhook')
