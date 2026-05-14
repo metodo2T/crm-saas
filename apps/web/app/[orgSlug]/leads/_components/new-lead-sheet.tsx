@@ -1,24 +1,30 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createLead } from '@/lib/api/leads';
+import { createLead, Lead } from '@/lib/api/leads';
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  defaultPhone?: string;
+  onCreated?: (lead: Lead) => void;
 }
 
-export function NewLeadSheet({ open, onClose }: Props) {
+export function NewLeadSheet({ open, onClose, defaultPhone, onCreated }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [company, setCompany] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) setPhone(defaultPhone ?? '');
+  }, [open, defaultPhone]);
 
   const { getToken } = useAuth();
   const { organization } = useOrganization();
@@ -37,11 +43,12 @@ export function NewLeadSheet({ open, onClose }: Props) {
         source: 'MANUAL',
       });
     },
-    onSuccess: () => {
+    onSuccess: (lead) => {
       queryClient.invalidateQueries({ queryKey: ['leads', 'kanban', organization?.id] });
+      onCreated?.(lead);
       setName('');
       setEmail('');
-      setPhone('');
+      setPhone(defaultPhone ?? '');
       setCompany('');
       setError('');
       onClose();
