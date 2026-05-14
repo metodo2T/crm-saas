@@ -12,6 +12,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { AuditModule } from './audit/audit.module';
 import { LeadsModule } from './leads/leads.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { DealsModule } from './deals/deals.module';
 
 @Module({
   controllers: [AppController],
@@ -28,6 +29,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     AuditModule,
     LeadsModule,
     WhatsAppModule,
+    DealsModule,
   ],
 })
 export class AppModule {}

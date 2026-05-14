@@ -1,14 +1,15 @@
-import { Controller, Post, RawBodyRequest, Req, Body, BadRequestException } from '@nestjs/common';
-import type { Request } from 'express';
+import { Controller, Post, Req, Body, BadRequestException } from '@nestjs/common';
 import { Webhook } from 'svix';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PipelineService } from '../deals/pipeline.service';
 
 @Controller('webhooks/clerk')
 export class ClerkWebhookController {
   constructor(
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
+    private readonly pipelineService: PipelineService,
   ) {}
 
   @Post()
@@ -51,7 +52,6 @@ export class ClerkWebhookController {
           planId: starterPlan.id,
         },
       });
-      // Auto-create a TRIALING subscription so PlanGuard works immediately
       await this.prisma.subscription.upsert({
         where: { organizationId: org.id },
         update: {},
@@ -64,6 +64,7 @@ export class ClerkWebhookController {
           currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
       });
+      await this.pipelineService.createDefaultPipeline(org.id);
     }
 
     if (type === 'organizationMembership.created') {
