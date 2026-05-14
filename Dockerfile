@@ -37,6 +37,7 @@ COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 
 # Copy compiled app
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+RUN ls apps/api/dist/main.js
 
 # Copy Prisma schema and root config (used by start.sh)
 COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
