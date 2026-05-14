@@ -121,3 +121,12 @@ export interface AnalyticsTrend {
 export async function getAnalytics(token: string): Promise<AnalyticsTrend> {
   return apiFetch('/leads/analytics', token);
 }
+
+export async function searchLeads(
+  token: string,
+  search: string,
+  limit = 5,
+): Promise<{ items: Lead[]; total: number }> {
+  const params = new URLSearchParams({ search, limit: String(limit) });
+  return apiFetch(`/leads?${params}`, token);
+}

@@ -16,7 +16,7 @@ export interface WaInstance {
 
 export interface WaConversation {
   remoteJid: string;
-  lead: { id: string; name: string; phone: string | null } | null;
+  lead: { id: string; name: string; phone: string | null; email: string | null; status: string } | null;
   lastMessage: string;
   lastTimestamp: string;
   unread: number;
@@ -83,5 +83,16 @@ export async function sendWaMessage(token: string, jid: string, text: string): P
   return apiFetch(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages`, token, {
     method: 'POST',
     body: JSON.stringify({ text }),
+  });
+}
+
+export async function linkWaLead(
+  token: string,
+  jid: string,
+  leadId: string | null,
+): Promise<{ lead: { id: string; name: string; phone: string | null; email: string | null; status: string; source: string } | null }> {
+  return apiFetch(`/whatsapp/conversations/${encodeURIComponent(jid)}/lead`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ leadId }),
   });
 }
