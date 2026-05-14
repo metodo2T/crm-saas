@@ -35,8 +35,8 @@ export class PipelineService extends BaseService {
   }
 
   async getKanban(organizationId: string) {
-    this.orgFilter(organizationId);
-    const pipeline = await this.getPipeline(organizationId);
+    const { organizationId: orgId } = this.orgFilter(organizationId);
+    const pipeline = await this.getPipeline(orgId);
 
     const [stages, sums] = await Promise.all([
       this.prisma.pipelineStage.findMany({
@@ -79,32 +79,35 @@ export class PipelineService extends BaseService {
   }
 
   async createStage(organizationId: string, dto: CreateStageDto) {
-    this.orgFilter(organizationId);
-    const pipeline = await this.getPipeline(organizationId);
-    const wonLost = await this.prisma.pipelineStage.findMany({
-      where: { pipelineId: pipeline.id, type: { in: ['WON', 'LOST'] } },
-      orderBy: { order: 'asc' },
-    });
-    const last = await this.prisma.pipelineStage.findFirst({
-      where: { pipelineId: pipeline.id, type: 'REGULAR' },
-      orderBy: { order: 'desc' },
-    });
-    const insertOrder = wonLost.length > 0 ? wonLost[0].order : (last ? last.order + 1 : 0);
-    if (wonLost.length > 0) {
-      await Promise.all(
-        wonLost.map((s) =>
-          this.prisma.pipelineStage.update({ where: { id: s.id }, data: { order: s.order + 1 } })
-        )
-      );
-    }
-    return this.prisma.pipelineStage.create({
-      data: { pipelineId: pipeline.id, name: dto.name, color: dto.color ?? '#6366f1', order: insertOrder, type: 'REGULAR' },
+    const { organizationId: orgId } = this.orgFilter(organizationId);
+    const pipeline = await this.getPipeline(orgId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const wonLost = await tx.pipelineStage.findMany({
+        where: { pipelineId: pipeline.id, type: { in: ['WON', 'LOST'] } },
+        orderBy: { order: 'asc' },
+      });
+      const last = await tx.pipelineStage.findFirst({
+        where: { pipelineId: pipeline.id, type: 'REGULAR' },
+        orderBy: { order: 'desc' },
+      });
+      const insertOrder = wonLost.length > 0 ? wonLost[0].order : (last ? last.order + 1 : 0);
+      if (wonLost.length > 0) {
+        await Promise.all(
+          wonLost.map((s) =>
+            tx.pipelineStage.update({ where: { id: s.id }, data: { order: s.order + 1 } })
+          )
+        );
+      }
+      return tx.pipelineStage.create({
+        data: { pipelineId: pipeline.id, name: dto.name, color: dto.color ?? '#6366f1', order: insertOrder, type: 'REGULAR' },
+      });
     });
   }
 
   async updateStage(organizationId: string, stageId: string, dto: UpdateStageDto) {
-    this.orgFilter(organizationId);
-    const pipeline = await this.getPipeline(organizationId);
+    const { organizationId: orgId } = this.orgFilter(organizationId);
+    const pipeline = await this.getPipeline(orgId);
     const stage = await this.prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId: pipeline.id } });
     if (!stage) throw new NotFoundException('Stage not found');
     return this.prisma.pipelineStage.update({
@@ -114,34 +117,31 @@ export class PipelineService extends BaseService {
   }
 
   async deleteStage(organizationId: string, stageId: string) {
-    this.orgFilter(organizationId);
-    const pipeline = await this.getPipeline(organizationId);
+    const { organizationId: orgId } = this.orgFilter(organizationId);
+    const pipeline = await this.getPipeline(orgId);
     const stage = await this.prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId: pipeline.id } });
     if (!stage) throw new NotFoundException('Stage not found');
     if (stage.type !== 'REGULAR') throw new BadRequestException('Cannot delete terminal stages');
 
-    const regularStages = await this.prisma.pipelineStage.findMany({
-      where: { pipelineId: pipeline.id, type: 'REGULAR' },
-      orderBy: { order: 'asc' },
+    return this.prisma.$transaction(async (tx) => {
+      const regularStages = await tx.pipelineStage.findMany({
+        where: { pipelineId: pipeline.id, type: 'REGULAR' },
+        orderBy: { order: 'asc' },
+      });
+      if (regularStages.length <= 1) {
+        throw new BadRequestException({ error: 'CANNOT_DELETE_LAST_STAGE', message: 'Cannot delete the only regular stage' });
+      }
+      const prev = regularStages.filter((s) => s.order < stage.order).pop();
+      const fallback = prev ?? regularStages.find((s) => s.id !== stageId)!;
+      await tx.deal.updateMany({ where: { stageId, pipelineId: pipeline.id }, data: { stageId: fallback.id } });
+      await tx.pipelineStage.delete({ where: { id: stageId } });
+      return { deleted: stageId, migratedTo: fallback.id };
     });
-    if (regularStages.length <= 1) {
-      throw new BadRequestException({ error: 'CANNOT_DELETE_LAST_STAGE', message: 'Cannot delete the only regular stage' });
-    }
-
-    const prev = regularStages.filter((s) => s.order < stage.order).pop();
-    const fallback = prev ?? regularStages.find((s) => s.id !== stageId)!;
-
-    await this.prisma.$transaction([
-      this.prisma.deal.updateMany({ where: { stageId, pipelineId: pipeline.id }, data: { stageId: fallback.id } }),
-      this.prisma.pipelineStage.delete({ where: { id: stageId } }),
-    ]);
-
-    return { deleted: stageId, migratedTo: fallback.id };
   }
 
   async reorderStages(organizationId: string, dto: ReorderStagesDto) {
-    this.orgFilter(organizationId);
-    const pipeline = await this.getPipeline(organizationId);
+    const { organizationId: orgId } = this.orgFilter(organizationId);
+    const pipeline = await this.getPipeline(orgId);
     const stages = await this.prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id } });
     const stageMap = new Map(stages.map((s) => [s.id, s]));
 
@@ -151,7 +151,7 @@ export class PipelineService extends BaseService {
 
     await Promise.all(
       dto.stageIds.map((id, idx) =>
-        this.prisma.pipelineStage.update({ where: { id }, data: { order: idx } })
+        this.prisma.pipelineStage.update({ where: { id, pipelineId: pipeline.id }, data: { order: idx } })
       )
     );
     return { reordered: true };

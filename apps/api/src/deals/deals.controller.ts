@@ -22,8 +22,8 @@ export class DealsController {
   ) {
     return this.dealsService.findAll(orgId, {
       stageId, assignedTo, search,
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
+      page: page ? (parseInt(page, 10) || 1) : 1,
+      limit: limit ? (parseInt(limit, 10) || 20) : 20,
     });
   }
 
