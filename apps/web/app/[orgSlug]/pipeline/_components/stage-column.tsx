@@ -1,6 +1,6 @@
 'use client';
 import { useDroppable } from '@dnd-kit/core';
-import { KanbanStage, Deal } from '@/lib/api/pipeline';
+import { type KanbanStage, type Deal } from '@/lib/api/pipeline';
 import { DealCard } from './deal-card';
 
 function formatBRL(value: number) {

@@ -5,7 +5,7 @@ import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getKanban, createStage, updateStage, deleteStage, KanbanStage } from '@/lib/api/pipeline';
+import { getKanban, createStage, updateStage, deleteStage, type KanbanStage } from '@/lib/api/pipeline';
 
 const PRESET_COLORS = ['#94a3b8','#3b82f6','#a855f7','#f59e0b','#ef4444','#22c55e','#ec4899','#14b8a6'];
 

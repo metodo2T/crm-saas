@@ -1,7 +1,7 @@
 'use client';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Deal } from '@/lib/api/pipeline';
+import { type Deal } from '@/lib/api/pipeline';
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);

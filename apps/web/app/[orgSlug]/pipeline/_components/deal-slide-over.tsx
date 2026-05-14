@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Deal, KanbanStage, updateDeal, moveDeal, deleteDeal } from '@/lib/api/pipeline';
+import { type Deal, type KanbanStage, updateDeal, moveDeal, deleteDeal } from '@/lib/api/pipeline';
 
 interface Props {
   deal: Deal | null;

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth, useOrganization } from '@clerk/nextjs';
-import { getKanban, moveDeal, PipelineKanban, Deal } from '@/lib/api/pipeline';
+import { getKanban, moveDeal, type PipelineKanban, type Deal } from '@/lib/api/pipeline';
 import { StageColumn } from './stage-column';
 import { DealCard } from './deal-card';
 import { DealSlideOver } from './deal-slide-over';
