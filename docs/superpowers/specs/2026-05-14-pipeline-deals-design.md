@@ -36,34 +36,41 @@ One pipeline per organization (enforced by `@unique` on `organizationId`). Creat
 
 ```prisma
 model PipelineStage {
-  id         String   @id @default(uuid())
+  id         String            @id @default(uuid())
   pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  pipeline   Pipeline          @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   name       String
-  color      String   @default("#6366f1")
+  color      String            @default("#6366f1")
   order      Int
+  type       StageType         @default(REGULAR)
   deals      Deal[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
   @@index([pipelineId, order])
+}
+
+enum StageType {
+  REGULAR
+  WON      // sets Deal.wonAt on move
+  LOST     // sets Deal.lostAt on move, prompts lostReason
 }
 ```
 
 **Default stages** (seeded on pipeline creation):
 
-| order | name | color |
-|-------|------|-------|
-| 0 | Prospecção | #94a3b8 |
-| 1 | Qualificação | #3b82f6 |
-| 2 | Proposta | #a855f7 |
-| 3 | Negociação | #f59e0b |
-| 4 | Ganho | #22c55e |
-| 5 | Perdido | #ef4444 |
+| order | name | color | type |
+|-------|------|-------|------|
+| 0 | Prospecção | #94a3b8 | `REGULAR` |
+| 1 | Qualificação | #3b82f6 | `REGULAR` |
+| 2 | Proposta | #a855f7 | `REGULAR` |
+| 3 | Negociação | #f59e0b | `REGULAR` |
+| 4 | Ganho | #22c55e | `WON` |
+| 5 | Perdido | #ef4444 | `LOST` |
 
-Stages 4 (Ganho) and 5 (Perdido) are terminal: moving a deal there sets `wonAt` or `lostAt` on the Deal.
+`WON` and `LOST` stages are terminal: the backend sets `Deal.wonAt` or `Deal.lostAt` when a deal is moved there. Terminal stages cannot be deleted. Their `type` cannot be changed. The user can rename them and change their color.
 
-Deleting a stage moves its deals to the previous stage (by order). Cannot delete if it's the only non-terminal stage.
+Deleting a `REGULAR` stage moves its deals to the stage immediately before it (by order); if there is no preceding regular stage, deals move to the first regular stage. Cannot delete a stage if it is the only `REGULAR` stage.
 
 ### Deal
 
