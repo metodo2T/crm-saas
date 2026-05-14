@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth, useOrganization } from '@clerk/nextjs';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { useParams, useRouter } from 'next/navigation';
 import { linkWaLead, WaConversation } from '@/lib/api/whatsapp';
 import { searchLeads, Lead } from '@/lib/api/leads';
@@ -33,8 +33,6 @@ export function WaLeadPanel({ jid, lead, onLinkChange }: Props) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const { getToken } = useAuth();
-  const { organization } = useOrganization();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const { orgSlug } = useParams<{ orgSlug: string }>();
 
@@ -58,7 +56,6 @@ export function WaLeadPanel({ jid, lead, onLinkChange }: Props) {
       return linkWaLead(token!, jid, leadId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wa', 'conversations', organization?.id] });
       setSearch('');
       onLinkChange();
     },
@@ -149,6 +146,7 @@ export function WaLeadPanel({ jid, lead, onLinkChange }: Props) {
         open={newLeadOpen}
         onClose={() => setNewLeadOpen(false)}
         defaultPhone={phone}
+        defaultSource="WHATSAPP"
         onCreated={(newLead) => linkMutation.mutate(newLead.id)}
       />
     </div>

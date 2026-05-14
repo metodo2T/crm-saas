@@ -6,16 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createLead, Lead } from '@/lib/api/leads';
+import { createLead, Lead, LeadSource } from '@/lib/api/leads';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   defaultPhone?: string;
+  defaultSource?: LeadSource;
   onCreated?: (lead: Lead) => void;
 }
 
-export function NewLeadSheet({ open, onClose, defaultPhone, onCreated }: Props) {
+export function NewLeadSheet({ open, onClose, defaultPhone, defaultSource, onCreated }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -40,7 +41,7 @@ export function NewLeadSheet({ open, onClose, defaultPhone, onCreated }: Props) 
         email: email || undefined,
         phone: phone || undefined,
         company: company || undefined,
-        source: 'MANUAL',
+        source: defaultSource ?? 'MANUAL',
       });
     },
     onSuccess: (lead) => {
