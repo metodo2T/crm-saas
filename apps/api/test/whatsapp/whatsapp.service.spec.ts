@@ -42,6 +42,7 @@ describe('WhatsAppService.linkLead', () => {
 
     expect(mockPrisma.lead.findFirst).toHaveBeenCalledWith({
       where: { id: 'lead-1', organizationId: 'org-1' },
+      select: { id: true, name: true, email: true, phone: true, status: true, source: true },
     });
     expect(mockPrisma.whatsAppMessage.updateMany).toHaveBeenCalledWith({
       where: { instanceId: 'inst-1', remoteJid: '11999@s.whatsapp.net' },

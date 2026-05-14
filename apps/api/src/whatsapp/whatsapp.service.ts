@@ -251,7 +251,10 @@ export class WhatsAppService {
 
     let lead = null;
     if (leadId !== null) {
-      lead = await this.prisma.lead.findFirst({ where: { id: leadId, organizationId } });
+      lead = await this.prisma.lead.findFirst({
+        where: { id: leadId, organizationId },
+        select: { id: true, name: true, email: true, phone: true, status: true, source: true },
+      });
       if (!lead) throw new NotFoundException('Lead not found');
     }
 
