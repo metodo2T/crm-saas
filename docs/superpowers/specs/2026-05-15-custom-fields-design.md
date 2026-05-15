@@ -1,82 +1,94 @@
-# Campos Customizados — Design Spec
+# Custom Fields — Design Spec
+**Data:** 2026-05-15
 
-**Data:** 2026-05-15  
-**Status:** Aprovado
+## Contexto
 
----
-
-## Objetivo
-
-Permitir que cada organização defina campos extras (texto ou número) nos seus leads, visíveis e editáveis no slide-over do lead. Os campos são gerenciados na página Settings → Campos Customizados.
+O CRM precisa permitir que cada workspace defina campos extras nos Leads e nos Deals, além dos campos nativos fixos. Os campos são gerenciados por admins em Settings e preenchidos por qualquer membro no slide-over da entidade.
 
 ---
 
 ## Decisões
 
-| Decisão | Escolha |
+| Questão | Decisão |
 |---|---|
-| Tipos de campo | TEXT e NUMBER |
-| Onde aparecem | Só no slide-over do lead |
-| Onde se configura | Settings → Campos Customizados |
-| Armazenamento | JSON column em Lead + modelo CustomFieldDef |
+| Entidades suportadas | Leads **e** Deals — conjuntos independentes |
+| Tipos de campo | TEXT, NUMBER, DATE, SELECT, MULTI_SELECT, CHECKBOX, URL |
+| Quem gerencia definições | Somente admins |
+| Obrigatoriedade | Sempre opcional |
+| UI no lead/deal | Aba separada "Campos extras" no slide-over |
+| UI em Settings | Entradas separadas no sidebar: "Campos Leads" e "Campos Deals" |
+| Armazenamento | Híbrido: definições em tabela `CustomFieldDef` + valores como JSONB em Lead/Deal |
+| Chave dos valores | `slug` da definição (ex: `"segmento"`) — estável mesmo se o nome mudar |
 
 ---
 
 ## 1. Modelo de Dados
 
-### Novo modelo `CustomFieldDef`
+### Nova tabela `CustomFieldDef`
 
 ```prisma
 model CustomFieldDef {
-  id             String          @id @default(uuid())
+  id             String            @id @default(uuid())
   organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity         CustomFieldEntity
   name           String
+  slug           String
   type           CustomFieldType
-  order          Int             @default(0)
-  createdAt      DateTime        @default(now())
+  options        Json?
+  order          Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  @@index([organizationId, order])
+  @@unique([organizationId, entity, slug])
+  @@index([organizationId, entity, order])
+}
+
+enum CustomFieldEntity {
+  LEAD
+  DEAL
 }
 
 enum CustomFieldType {
   TEXT
   NUMBER
+  DATE
+  SELECT
+  MULTI_SELECT
+  CHECKBOX
+  URL
 }
 ```
 
-### Alteração no modelo `Lead`
+- `slug`: gerado em kebab-case a partir do `name` na criação, imutável após isso
+- `options`: `string[]` serializado como JSON — usado apenas para SELECT e MULTI_SELECT
+- `order`: controla a ordem de exibição nos forms
 
-Adicionar coluna:
+### Mudanças nos modelos existentes
 
 ```prisma
-customData  Json?
+model Lead { ...  customData Json? }
+model Deal { ...  customData Json? }
 ```
 
-Formato do valor em runtime:
+Formato em runtime: `{ "segmento": "B2B", "cnpj": "12.345.678/0001-90" }`.
 
-```json
-{
-  "<CustomFieldDef.id>": "valor texto",
-  "<CustomFieldDef.id>": 5000
+Ao deletar uma definição, os dados órfãos no JSONB são silenciosamente ignorados na renderização — nenhuma limpeza ativa necessária.
+
+### Relação inversa em Organization
+
+```prisma
+model Organization {
+  ...
+  customFieldDefs CustomFieldDef[]
 }
-```
-
-Usar o `id` como chave (não o `name`) para preservar valores quando o admin renomear um campo.
-
-### Alteração no modelo `Organization`
-
-Adicionar relação inversa:
-
-```prisma
-customFieldDefs CustomFieldDef[]
 ```
 
 ### Migration
 
-Uma migration com dois passos:
-1. `CREATE TABLE "CustomFieldDef" (...)` com FK para `Organization`
-2. `ALTER TABLE "Lead" ADD COLUMN "customData" JSONB`
+`0005_add_custom_fields` — dois passos:
+1. Criar tabela `CustomFieldDef` com enums
+2. `ALTER TABLE "Lead" ADD COLUMN "customData" JSONB` e `ALTER TABLE "Deal" ADD COLUMN "customData" JSONB`
 
 ---
 
@@ -84,112 +96,131 @@ Uma migration com dois passos:
 
 ### Novo módulo `apps/api/src/custom-fields/`
 
-**Arquivos:**
-- `custom-fields.module.ts`
-- `custom-fields.controller.ts`
-- `custom-fields.service.ts`
-- `dto/create-custom-field.dto.ts` — `{ name: string, type: 'TEXT' | 'NUMBER' }`
-- `dto/update-custom-field.dto.ts` — `{ name?: string, order?: number }`
-
-**Endpoints:**
-
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/custom-fields` | Lista definições da org, ordenadas por `order` |
-| POST | `/custom-fields` | Cria novo campo (`name`, `type`) |
-| PATCH | `/custom-fields/:id` | Renomeia ou reordena campo |
-| DELETE | `/custom-fields/:id` | Remove definição (valores no JSON ficam orfãos, sem erro) |
-
-Todos os endpoints usam `ClerkAuthGuard` e filtram por `organizationId` extraído do token — padrão existente no projeto.
-
-### Alteração em `leads.service.ts` e `leads.controller.ts`
-
-O `PATCH /leads/:id` já existente aceita `customData` no body:
-
-```ts
-// update-lead.dto.ts — adicionar campo:
-@IsOptional()
-customData?: Record<string, string | number>;
+```
+custom-fields/
+  custom-fields.module.ts
+  custom-fields.controller.ts
+  custom-fields.service.ts
+  dto/
+    create-custom-field.dto.ts
+    update-custom-field.dto.ts
 ```
 
-O `GET /leads/kanban` e demais endpoints já retornam o objeto Lead completo — `customData` aparece automaticamente após a migration.
+**`CustomFieldsService`**
 
----
-
-## 3. Frontend
-
-### 3a. Settings Layout com sub-navegação
-
-**Novo arquivo:** `apps/web/app/[orgSlug]/settings/layout.tsx`
-
-```
-Settings Layout
-├── Sub-nav (links horizontais): Workspace | Membros | Billing | Campos
-└── {children}
-```
-
-Sub-nav dark com links `text-slate-400`, ativo `text-indigo-300 border-b-2 border-indigo-500`.
-
-### 3b. Página Settings → Campos Customizados
-
-**Novo arquivo:** `apps/web/app/[orgSlug]/settings/custom-fields/page.tsx`
-
-**UI:**
-- Título "Campos Customizados" + subtítulo
-- Card `bg-[#1e293b]` com tabela de campos existentes:
-  - Colunas: Nome | Tipo (badge TEXTO/NÚMERO) | Ação (botão remover)
-  - Estado vazio: "Nenhum campo ainda. Adicione o primeiro abaixo."
-- Formulário inline de adição (sempre visível abaixo da tabela):
-  - Input "Nome do campo" + select "Texto / Número" + botão "Adicionar"
-  - Ao salvar: POST `/custom-fields` → invalida query → campo aparece na lista
-
-**API no frontend:** `apps/web/lib/api/custom-fields.ts`
-
-```ts
-export interface CustomFieldDef {
-  id: string;
-  name: string;
-  type: 'TEXT' | 'NUMBER';
-  order: number;
-}
-
-export async function getCustomFields(token: string): Promise<CustomFieldDef[]>
-export async function createCustomField(token: string, name: string, type: 'TEXT' | 'NUMBER'): Promise<CustomFieldDef>
-export async function deleteCustomField(token: string, id: string): Promise<void>
-```
-
-### 3c. Seção no Lead Slide-Over
-
-**Arquivo modificado:** `apps/web/app/[orgSlug]/leads/_components/lead-slide-over.tsx`
-
-Adicionar seção abaixo dos campos de contato (email, phone, company, notes):
-
-```
-─────────────────────────
-CAMPOS CUSTOMIZADOS          ← label indigo uppercase
-Budget                       ← label cinza
-[    5000         ]          ← input number, dark
-Observação interna
-[  Interesse anual  ]        ← input text, dark
-Score
-[    —             ]        ← vazio, placeholder "—"
-```
-
-**Comportamento:**
-- Carrega `CustomFieldDef[]` da org via `useQuery(['custom-fields', orgId])`
-- Para cada definição, renderiza input `type="text"` ou `type="number"` com valor de `lead.customData[field.id] ?? ''`
-- `onBlur`: chama `PATCH /leads/:id` com `{ customData: { ...lead.customData, [field.id]: novoValor } }`
-- Auto-save no blur (sem botão "Salvar" separado)
-- Se a org não tem nenhum campo definido: seção oculta (não exibe nada)
-
----
-
-## 4. Arquivos a Modificar / Criar
-
-| Arquivo | Tipo |
+| Método | Descrição |
 |---|---|
-| `packages/db/prisma/schema.prisma` | Modificar: novo modelo + coluna |
-| `packages/db/prisma/migrations/...` | Criar: migration |
+| `findAll(orgId, entity)` | Lista definições ordenadas por `order` |
+| `create(orgId, dto)` | Gera slug, valida unicidade, insere |
+| `update(orgId, id, dto)` | Atualiza name/options/order; slug e entity são imutáveis |
+| `remove(orgId, id)` | Remove definição; valores JSONB ficam órfãos sem quebrar nada |
+
+**`CustomFieldsController`** — prefixo `/organizations/:orgSlug/custom-fields`
+
+| Método | Rota | Guard | Descrição |
+|---|---|---|---|
+| GET | `/?entity=LEAD\|DEAL` | auth | Lista definições |
+| POST | `/` | admin | Cria campo |
+| PATCH | `/:id` | admin | Edita campo |
+| DELETE | `/:id` | admin | Remove campo |
+
+Guard de admin: verificar `role === 'ADMIN'` no `OrganizationMember` — padrão já usado em outros controllers.
+
+### Mudanças nos serviços existentes
+
+**`dto/update-lead.dto.ts` e `dto/update-deal.dto.ts`** — adicionar:
+```ts
+@IsOptional()
+customData?: Record<string, unknown>;
+```
+
+**`leads.service.ts` e `deals.service.ts`** — no `update()`, fazer merge:
+```ts
+customData: dto.customData
+  ? { ...(existing.customData as object ?? {}), ...dto.customData }
+  : undefined
+```
+
+Nenhum endpoint novo para valores — `customData` vai junto no PATCH normal da entidade.
+
+---
+
+## 3. Frontend (Next.js)
+
+### 3a. Settings — Sidebar
+
+**`app/[orgSlug]/_components/app-sidebar.tsx`** — adicionar grupo "Personalização":
+- "Campos Leads" → `/[orgSlug]/settings/custom-fields/leads`
+- "Campos Deals" → `/[orgSlug]/settings/custom-fields/deals`
+
+### 3b. Páginas de Settings
+
+```
+app/[orgSlug]/settings/custom-fields/
+  leads/page.tsx
+  deals/page.tsx
+```
+
+Ambas usam o componente `CustomFieldsManager` passando `entity="LEAD"` ou `entity="DEAL"`.
+
+**Componente `CustomFieldsManager`:**
+- Tabela: Nome | Tipo (badge) | Opções | Ações (editar, remover)
+- Botão "+ Novo campo" abre Sheet/Drawer
+- Drawer de criar/editar:
+  - Input nome, select tipo
+  - Se tipo SELECT ou MULTI_SELECT: área para adicionar/remover opções (tags)
+  - Setas up/down para reordenar (ou drag-and-drop futuro)
+- Estado vazio: "Nenhum campo definido. Crie o primeiro."
+- Acesso restrito: só renderiza se o usuário for admin
+
+### 3c. Lead slide-over
+
+**`app/[orgSlug]/leads/_components/lead-slide-over.tsx`**
+
+- Adicionar aba **"Campos extras"** nas tabs existentes
+- Conteúdo da aba: form dinâmico gerado a partir de `useCustomFields('LEAD')`
+- Renderização por tipo:
+
+| Tipo | Componente |
+|---|---|
+| TEXT / URL | `<Input>` |
+| NUMBER | `<Input type="number">` |
+| DATE | `<DatePicker>` (shadcn Popover + Calendar) |
+| SELECT | `<Select>` com `options` da definição |
+| MULTI_SELECT | badges removíveis + dropdown para adicionar |
+| CHECKBOX | `<Checkbox>` |
+
+- Valor inicial: `lead.customData?.[slug] ?? ''`
+- Salvar: botão "Salvar campos" faz `PATCH /leads/:id` com `{ customData: { [slug]: valor } }`
+- Se a org não tem campos definidos: aba "Campos extras" fica oculta
+
+### 3d. Deal slide-over
+
+**`app/[orgSlug]/pipeline/_components/deal-slide-over.tsx`**
+
+Mesma estrutura usando `useCustomFields('DEAL')` e `PATCH /deals/:id`.
+
+### 3e. Hook compartilhado
+
+**`apps/web/hooks/use-custom-fields.ts`**
+
+```ts
+function useCustomFields(entity: 'LEAD' | 'DEAL'): {
+  fields: CustomFieldDef[]
+  isLoading: boolean
+}
+```
+
+React Query com cache por `['custom-fields', orgId, entity]`.
+
+---
+
+## 4. Arquivos a Criar / Modificar
+
+| Arquivo | Ação |
+|---|---|
+| `packages/db/prisma/schema.prisma` | Modificar: novo modelo + colunas + enums |
+| `packages/db/prisma/migrations/0005_add_custom_fields/` | Criar: migration SQL |
 | `apps/api/src/custom-fields/custom-fields.module.ts` | Novo |
 | `apps/api/src/custom-fields/custom-fields.controller.ts` | Novo |
 | `apps/api/src/custom-fields/custom-fields.service.ts` | Novo |
@@ -197,17 +228,23 @@ Score
 | `apps/api/src/custom-fields/dto/update-custom-field.dto.ts` | Novo |
 | `apps/api/src/app.module.ts` | Modificar: registrar CustomFieldsModule |
 | `apps/api/src/leads/dto/update-lead.dto.ts` | Modificar: adicionar customData |
-| `apps/api/src/leads/leads.service.ts` | Modificar: incluir customData no update |
-| `apps/web/lib/api/custom-fields.ts` | Novo |
-| `apps/web/app/[orgSlug]/settings/layout.tsx` | Novo: sub-nav de settings |
-| `apps/web/app/[orgSlug]/settings/custom-fields/page.tsx` | Novo |
-| `apps/web/app/[orgSlug]/leads/_components/lead-slide-over.tsx` | Modificar: seção custom fields |
+| `apps/api/src/leads/leads.service.ts` | Modificar: merge customData no update |
+| `apps/api/src/deals/dto/update-deal.dto.ts` | Modificar: adicionar customData |
+| `apps/api/src/deals/deals.service.ts` | Modificar: merge customData no update |
+| `apps/web/hooks/use-custom-fields.ts` | Novo |
+| `apps/web/app/[orgSlug]/_components/app-sidebar.tsx` | Modificar: grupo Personalização |
+| `apps/web/app/[orgSlug]/settings/custom-fields/leads/page.tsx` | Novo |
+| `apps/web/app/[orgSlug]/settings/custom-fields/deals/page.tsx` | Novo |
+| `apps/web/components/custom-fields-manager.tsx` | Novo |
+| `apps/web/app/[orgSlug]/leads/_components/lead-slide-over.tsx` | Modificar: aba Campos extras |
+| `apps/web/app/[orgSlug]/pipeline/_components/deal-slide-over.tsx` | Modificar: aba Campos extras |
 
 ---
 
-## 5. O que NÃO muda
+## 5. Fora do escopo (v1)
 
-- Lógica de kanban, status, pipeline, whatsapp
-- CSV export (campos customizados não entram no export — escopo futuro)
-- Filtros de leads (não filtrável por campo custom — escopo futuro)
-- Campos no card do kanban (clean, sem campos custom visíveis)
+- Campos obrigatórios
+- Filtros/busca por valor de campo customizado
+- Export CSV com campos customizados
+- Lookup para outra entidade
+- Reordenação por drag-and-drop (setas up/down suficiente)
