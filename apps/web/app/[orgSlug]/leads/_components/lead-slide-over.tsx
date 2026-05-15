@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Lead, LeadStatus, updateLeadStatus, deleteLead } from '@/lib/api/leads';
+import { Lead, LeadStatus, updateLeadStatus, deleteLead, updateLead } from '@/lib/api/leads';
 import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCustomFields } from '@/hooks/use-custom-fields';
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NOVO: 'Novo', CONTATADO: 'Contatado', QUALIFICADO: 'Qualificado',
@@ -59,6 +60,22 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
     },
   });
 
+  const [activeTab, setActiveTab] = useState<'detalhes' | 'campos'>('detalhes');
+  const { fields: customFields } = useCustomFields('LEAD');
+  const [customValues, setCustomValues] = useState<Record<string, unknown>>(
+    (lead?.customData as Record<string, unknown>) ?? {}
+  );
+
+  const saveCustomMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      return updateLead(token!, lead!.id, { customData: customValues });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+
   if (!lead) return null;
 
   const hasUtms = lead.utmSource || lead.utmMedium || lead.utmCampaign || lead.fbclid || lead.gclid;
@@ -75,6 +92,24 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
           </div>
         </SheetHeader>
 
+        {/* Tabs */}
+        <div className="flex border-b border-[#334155] mt-4 px-6">
+          {(['detalhes', 'campos'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-2 mr-4 text-xs font-semibold uppercase tracking-wide transition-colors border-b-2 -mb-px ${
+                activeTab === tab
+                  ? 'text-indigo-300 border-indigo-500'
+                  : 'text-slate-500 border-transparent hover:text-slate-300'
+              }`}
+            >
+              {tab === 'detalhes' ? 'Detalhes' : 'Campos extras'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'detalhes' && (<>
         <div className="mt-6 space-y-2 text-sm text-slate-300 px-6">
           {lead.email && <p className="flex items-center gap-2"><span className="text-slate-500">Email</span>{lead.email}</p>}
           {lead.phone && <p className="flex items-center gap-2"><span className="text-slate-500">Telefone</span>{lead.phone}</p>}
@@ -156,6 +191,89 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
             Descartar lead
           </Button>
         </div>
+        </>)}
+
+        {activeTab === 'campos' && (
+          <div className="mt-6 px-6">
+            {customFields.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-8">
+                Nenhum campo customizado definido.{' '}
+                <span className="text-indigo-400">Configure em Configurações → Campos Leads.</span>
+              </p>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {customFields.map((field) => {
+                    const value = customValues[field.slug] ?? (lead.customData as Record<string, unknown>)?.[field.slug] ?? '';
+                    return (
+                      <div key={field.id}>
+                        <p className="text-xs text-slate-500 mb-1">{field.name}</p>
+                        {field.type === 'CHECKBOX' ? (
+                          <input
+                            type="checkbox"
+                            checked={!!value}
+                            onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.slug]: e.target.checked }))}
+                            className="w-4 h-4 accent-indigo-500"
+                          />
+                        ) : field.type === 'SELECT' ? (
+                          <select
+                            value={String(value)}
+                            onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.slug]: e.target.value }))}
+                            className="w-full h-8 px-3 rounded-md bg-[#0f172a] border border-[#334155] text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          >
+                            <option value="">— Selecionar —</option>
+                            {(field.options ?? []).map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : field.type === 'MULTI_SELECT' ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {(field.options ?? []).map((opt) => {
+                              const selected = Array.isArray(value) ? (value as string[]).includes(opt) : false;
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => {
+                                    const current = Array.isArray(value) ? (value as string[]) : [];
+                                    const next = selected ? current.filter((v) => v !== opt) : [...current, opt];
+                                    setCustomValues((prev) => ({ ...prev, [field.slug]: next }));
+                                  }}
+                                  className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                    selected
+                                      ? 'bg-indigo-600 border-indigo-500 text-white'
+                                      : 'bg-[#0f172a] border-[#334155] text-slate-400 hover:text-slate-200'
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <input
+                            type={field.type === 'NUMBER' ? 'number' : field.type === 'DATE' ? 'date' : field.type === 'URL' ? 'url' : 'text'}
+                            value={String(value)}
+                            onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.slug]: e.target.value }))}
+                            placeholder="—"
+                            className="w-full h-8 px-3 rounded-md bg-[#0f172a] border border-[#334155] text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button
+                  onClick={() => saveCustomMutation.mutate()}
+                  disabled={saveCustomMutation.isPending}
+                  className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {saveCustomMutation.isPending ? 'Salvando...' : 'Salvar campos'}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
