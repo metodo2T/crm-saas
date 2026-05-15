@@ -31,7 +31,7 @@ export function StageColumn({ stage, onDealClick }: Props) {
         className={`flex-1 flex flex-col gap-2 min-h-[200px] rounded-lg p-2 transition-colors ${
           isOver
             ? 'bg-indigo-500/10 border-2 border-indigo-500/40 border-dashed'
-            : 'bg-[#1e293b]/60 border border-[#334155]'
+            : 'bg-[#1e293b]/60 border-2 border-[#334155]'
         }`}
       >
         {stage.deals.map((deal) => (
