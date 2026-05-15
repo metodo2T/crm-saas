@@ -1,3 +1,4 @@
+// apps/web/app/[orgSlug]/leads/_components/lead-card.tsx
 'use client';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -13,10 +14,10 @@ interface Props {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  MANUAL: 'bg-slate-100 text-slate-600',
-  CSV: 'bg-slate-100 text-slate-600',
-  FORM: 'bg-blue-50 text-blue-600',
-  WHATSAPP: 'bg-green-50 text-green-700',
+  MANUAL: 'bg-slate-800 text-slate-400',
+  CSV:    'bg-slate-800 text-slate-400',
+  FORM:   'bg-indigo-950 text-indigo-400',
+  WHATSAPP: 'bg-emerald-950 text-emerald-400',
 };
 
 export function LeadCard({ lead, onClick, selected = false, onSelect }: Props) {
@@ -41,16 +42,16 @@ export function LeadCard({ lead, onClick, selected = false, onSelect }: Props) {
       style={style}
       {...(onSelect ? {} : { ...attributes, ...listeners })}
       onClick={() => onSelect ? onSelect(lead.id, !selected) : onClick(lead)}
-      className={`relative bg-white border rounded-lg p-3 cursor-pointer transition-all ${
+      className={`relative bg-[#1e293b] border rounded-lg p-3 cursor-pointer transition-all ${
         selected
-          ? 'border-blue-400 ring-2 ring-blue-100 shadow-sm'
-          : 'border-slate-200 hover:border-blue-300 hover:shadow-sm'
+          ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+          : 'border-[#334155] hover:border-indigo-500/50 hover:shadow-sm'
       }`}
     >
       {onSelect && (
         <div className="absolute top-2.5 right-2.5">
           <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-            selected ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'
+            selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-600 bg-[#0f172a]'
           }`}>
             {selected && (
               <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
@@ -60,22 +61,22 @@ export function LeadCard({ lead, onClick, selected = false, onSelect }: Props) {
           </div>
         </div>
       )}
-      <p className={`text-sm font-semibold text-slate-900 mb-1 ${onSelect ? 'pr-6' : ''}`}>{lead.name}</p>
+      <p className={`text-sm font-semibold text-slate-200 mb-1 ${onSelect ? 'pr-6' : ''}`}>{lead.name}</p>
       <div className="flex items-center gap-1.5 mb-2">
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${SOURCE_COLORS[lead.source]}`}>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${SOURCE_COLORS[lead.source] ?? 'bg-slate-800 text-slate-400'}`}>
           {lead.source}
         </span>
-        <span className="text-[10px] text-slate-400">{relativeTime}</span>
+        <span className="text-[10px] text-slate-600">{relativeTime}</span>
       </div>
       {lead.assignedTo ? (
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[8px] text-white font-bold">
+          <div className="w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-[8px] text-white font-bold">
             {lead.assignedTo.name[0].toUpperCase()}
           </div>
           <span className="text-[10px] text-slate-500">{lead.assignedTo.name}</span>
         </div>
       ) : (
-        <span className="text-[10px] text-slate-400">sem responsável</span>
+        <span className="text-[10px] text-slate-600">sem responsável</span>
       )}
     </div>
   );

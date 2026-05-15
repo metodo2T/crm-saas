@@ -1,7 +1,7 @@
+// apps/web/app/[orgSlug]/leads/_components/lead-slide-over.tsx
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Lead, LeadStatus, updateLeadStatus, deleteLead } from '@/lib/api/leads';
@@ -9,19 +9,16 @@ import { useAuth, useOrganization } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
-  NOVO: 'Novo',
-  CONTATADO: 'Contatado',
-  QUALIFICADO: 'Qualificado',
-  CONVERTIDO: 'Convertido',
-  DESCARTADO: 'Descartado',
+  NOVO: 'Novo', CONTATADO: 'Contatado', QUALIFICADO: 'Qualificado',
+  CONVERTIDO: 'Convertido', DESCARTADO: 'Descartado',
 };
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
-  NOVO: 'bg-blue-50 text-blue-700',
-  CONTATADO: 'bg-amber-50 text-amber-700',
-  QUALIFICADO: 'bg-violet-50 text-violet-700',
-  CONVERTIDO: 'bg-green-50 text-green-700',
-  DESCARTADO: 'bg-slate-100 text-slate-500',
+  NOVO:        'bg-blue-950 text-blue-400',
+  CONTATADO:   'bg-amber-950 text-amber-400',
+  QUALIFICADO: 'bg-violet-950 text-violet-400',
+  CONVERTIDO:  'bg-emerald-950 text-emerald-400',
+  DESCARTADO:  'bg-slate-800 text-slate-500',
 };
 
 const ALL_STATUSES: LeadStatus[] = ['NOVO', 'CONTATADO', 'QUALIFICADO', 'CONVERTIDO', 'DESCARTADO'];
@@ -68,9 +65,9 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-[420px] bg-white border-slate-200 text-slate-900">
+      <SheetContent className="w-[420px] bg-[#1e293b] border-[#334155] text-slate-100">
         <SheetHeader>
-          <SheetTitle className="text-slate-900 text-xl">{lead.name}</SheetTitle>
+          <SheetTitle className="text-slate-100 text-xl">{lead.name}</SheetTitle>
           <div className="flex gap-2 mt-1">
             <span className={`text-xs px-2 py-1 rounded font-semibold ${STATUS_COLORS[lead.status]}`}>
               {STATUS_LABELS[lead.status]}
@@ -78,18 +75,12 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
           </div>
         </SheetHeader>
 
-        <div className="mt-6 space-y-2 text-sm text-slate-700 px-6">
-          {lead.email && (
-            <p className="flex items-center gap-2"><span className="text-slate-400">Email</span>{lead.email}</p>
-          )}
-          {lead.phone && (
-            <p className="flex items-center gap-2"><span className="text-slate-400">Telefone</span>{lead.phone}</p>
-          )}
-          {lead.company && (
-            <p className="flex items-center gap-2"><span className="text-slate-400">Empresa</span>{lead.company}</p>
-          )}
+        <div className="mt-6 space-y-2 text-sm text-slate-300 px-6">
+          {lead.email && <p className="flex items-center gap-2"><span className="text-slate-500">Email</span>{lead.email}</p>}
+          {lead.phone && <p className="flex items-center gap-2"><span className="text-slate-500">Telefone</span>{lead.phone}</p>}
+          {lead.company && <p className="flex items-center gap-2"><span className="text-slate-500">Empresa</span>{lead.company}</p>}
           {lead.notes && (
-            <p className="text-slate-500 text-xs mt-3 bg-slate-50 rounded-lg p-3 border border-slate-100">{lead.notes}</p>
+            <p className="text-slate-400 text-xs mt-3 bg-[#0f172a] rounded-lg p-3 border border-[#334155]">{lead.notes}</p>
           )}
         </div>
 
@@ -97,12 +88,12 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
           <div className="mt-4 px-6">
             <button
               onClick={() => setShowUtms(!showUtms)}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
             >
               {showUtms ? '▲ Ocultar rastreamento' : '▼ Ver UTMs / rastreamento'}
             </button>
             {showUtms && (
-              <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-500 space-y-1 font-mono border border-slate-100">
+              <div className="mt-2 bg-[#0f172a] rounded-lg p-3 text-xs text-slate-500 space-y-1 font-mono border border-[#334155]">
                 {lead.utmSource && <p>utm_source: {lead.utmSource}</p>}
                 {lead.utmMedium && <p>utm_medium: {lead.utmMedium}</p>}
                 {lead.utmCampaign && <p>utm_campaign: {lead.utmCampaign}</p>}
@@ -116,14 +107,14 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
         )}
 
         <div className="mt-6 px-6">
-          <p className="text-xs text-slate-400 mb-2 uppercase tracking-wide font-medium">Mover para</p>
+          <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide font-medium">Mover para</p>
           <div className="flex flex-wrap gap-2">
             {ALL_STATUSES.filter((s) => s !== lead.status && lead.status !== 'CONVERTIDO').map((s) => (
               <Button
                 key={s}
                 size="sm"
                 variant="outline"
-                className="text-xs"
+                className="text-xs border-[#334155] bg-transparent text-slate-300 hover:bg-[#334155] hover:text-slate-100"
                 onClick={() => statusMutation.mutate(s)}
                 disabled={statusMutation.isPending}
               >
@@ -135,11 +126,11 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
 
         {lead.phone && (
           <div className="mt-4 px-6">
-            <p className="text-xs text-slate-400 mb-2 uppercase tracking-wide font-medium">WhatsApp</p>
+            <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide font-medium">WhatsApp</p>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs border-green-200 text-green-700 hover:bg-green-50"
+              className="text-xs border-emerald-800 text-emerald-400 hover:bg-emerald-950 bg-transparent"
               onClick={() => {
                 const jid = `${lead.phone!.replace(/\D/g, '')}@s.whatsapp.net`;
                 router.push(`/${orgSlug}/whatsapp?jid=${encodeURIComponent(jid)}`);
@@ -154,7 +145,7 @@ export function LeadSlideOver({ lead, open, onClose }: Props) {
           </div>
         )}
 
-        <div className="mt-6 pt-4 border-t border-slate-100 px-6">
+        <div className="mt-6 pt-4 border-t border-[#334155] px-6">
           <Button
             variant="destructive"
             size="sm"

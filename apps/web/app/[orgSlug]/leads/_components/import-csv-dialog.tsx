@@ -54,7 +54,7 @@ export function ImportCsvDialog({ open, onClose }: Props) {
         <div className="mt-2 space-y-4">
           <p className="text-xs text-slate-400">
             Colunas aceitas:{' '}
-            <code className="text-blue-400">nome, email, telefone, empresa, observações</code>
+            <code className="text-indigo-400">nome, email, telefone, empresa, observações</code>
             <br />
             Máximo 500 linhas por importação.
           </p>
@@ -86,7 +86,7 @@ export function ImportCsvDialog({ open, onClose }: Props) {
               <Button
                 onClick={() => mutation.mutate()}
                 disabled={!file || mutation.isPending}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white"
               >
                 {mutation.isPending ? 'Importando...' : 'Importar'}
               </Button>

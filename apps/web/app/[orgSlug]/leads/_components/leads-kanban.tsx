@@ -1,3 +1,4 @@
+// apps/web/app/[orgSlug]/leads/_components/leads-kanban.tsx
 'use client';
 import { useState } from 'react';
 import {
@@ -10,14 +11,13 @@ import { useAuth, useOrganization } from '@clerk/nextjs';
 import { getKanban, updateLeadStatus, bulkAction, Lead, LeadStatus, KanbanData } from '@/lib/api/leads';
 import { LeadCard } from './lead-card';
 import { LeadSlideOver } from './lead-slide-over';
-import { Button } from '@/components/ui/button';
 
 const COLUMNS: { key: LeadStatus; label: string; color: string; dot: string }[] = [
-  { key: 'NOVO', label: 'Novo', color: 'text-blue-700', dot: 'bg-blue-500' },
-  { key: 'CONTATADO', label: 'Contatado', color: 'text-amber-700', dot: 'bg-amber-500' },
-  { key: 'QUALIFICADO', label: 'Qualificado', color: 'text-violet-700', dot: 'bg-violet-500' },
-  { key: 'CONVERTIDO', label: 'Convertido', color: 'text-green-700', dot: 'bg-green-500' },
-  { key: 'DESCARTADO', label: 'Descartado', color: 'text-slate-500', dot: 'bg-slate-400' },
+  { key: 'NOVO',        label: 'Novo',        color: 'text-blue-400',    dot: 'bg-blue-500'    },
+  { key: 'CONTATADO',   label: 'Contatado',   color: 'text-amber-400',   dot: 'bg-amber-500'   },
+  { key: 'QUALIFICADO', label: 'Qualificado', color: 'text-violet-400',  dot: 'bg-violet-500'  },
+  { key: 'CONVERTIDO',  label: 'Convertido',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
+  { key: 'DESCARTADO',  label: 'Descartado',  color: 'text-slate-500',   dot: 'bg-slate-600'   },
 ];
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -112,7 +112,7 @@ export function LeadsKanban({ selectionMode }: Props) {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Carregando leads...</div>;
+    return <div className="flex items-center justify-center h-64 text-slate-600 text-sm">Carregando leads...</div>;
   }
 
   const allLeads = data ? Object.values(data).flat() : [];
@@ -120,9 +120,8 @@ export function LeadsKanban({ selectionMode }: Props) {
 
   return (
     <>
-      {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="mx-4 mb-3 bg-blue-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3 text-sm flex-wrap">
+        <div className="mx-4 mb-3 bg-indigo-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3 text-sm flex-wrap">
           <span className="font-semibold">{selectedIds.size} selecionado{selectedIds.size > 1 ? 's' : ''}</span>
           <div className="flex items-center gap-2 flex-wrap">
             {(['NOVO', 'CONTATADO', 'QUALIFICADO', 'CONVERTIDO'] as LeadStatus[]).map((s) => (
@@ -162,13 +161,13 @@ export function LeadsKanban({ selectionMode }: Props) {
           {COLUMNS.map((col) => {
             const leads = data?.[col.key] ?? [];
             return (
-              <div key={col.key} className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
-                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div key={col.key} className="bg-[#1e293b] border border-[#334155] rounded-xl overflow-hidden flex flex-col">
+                <div className="px-3 py-2.5 border-b border-[#334155] flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className={`text-xs font-bold uppercase tracking-wide ${col.color}`}>{col.label}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">
+                  <span className="text-[10px] text-slate-500 bg-[#0f172a] px-1.5 py-0.5 rounded-full font-medium">
                     {leads.length}
                   </span>
                 </div>

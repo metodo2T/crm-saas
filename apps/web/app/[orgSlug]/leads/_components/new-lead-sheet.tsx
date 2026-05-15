@@ -115,7 +115,7 @@ export function NewLeadSheet({ open, onClose, defaultPhone, defaultSource, onCre
           <Button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white"
           >
             {mutation.isPending ? 'Salvando...' : 'Criar Lead'}
           </Button>
