@@ -5,4 +5,5 @@ export class UpdateLeadDto {
   company?: string;
   notes?: string;
   assignedToId?: string;
+  customData?: Record<string, unknown>;
 }

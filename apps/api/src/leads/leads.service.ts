@@ -126,8 +126,13 @@ export class LeadsService extends BaseService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateLeadDto) {
-    await this.findOne(organizationId, id);
-    return this.prisma.lead.update({ where: { id }, data: dto });
+    const lead = await this.findOne(organizationId, id);
+    const { customData, ...rest } = dto;
+    const data: Record<string, unknown> = { ...rest };
+    if (customData !== undefined) {
+      data.customData = { ...(lead.customData as object ?? {}), ...customData };
+    }
+    return this.prisma.lead.update({ where: { id }, data: data as any });
   }
 
   async updateStatus(organizationId: string, id: string, dto: UpdateStatusDto) {

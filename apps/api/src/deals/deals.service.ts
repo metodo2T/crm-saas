@@ -90,16 +90,16 @@ export class DealsService extends BaseService {
     const deal = await this.prisma.deal.findFirst({ where: { id, organizationId: orgId } });
     if (!deal) throw new NotFoundException('Deal not found');
 
-    const data: any = {};
-    if (dto.title !== undefined) data.title = dto.title;
-    if (dto.leadId !== undefined) data.leadId = dto.leadId;
-    if (dto.value !== undefined) data.value = dto.value;
-    if (dto.probability !== undefined) data.probability = dto.probability;
-    if (dto.expectedCloseAt !== undefined) data.expectedCloseAt = dto.expectedCloseAt ? new Date(dto.expectedCloseAt) : null;
-    if (dto.assignedToId !== undefined) data.assignedToId = dto.assignedToId;
-    if (dto.notes !== undefined) data.notes = dto.notes;
+    const { customData, expectedCloseAt, value, probability, ...rest } = dto;
+    const data: Record<string, unknown> = { ...rest };
+    if (value !== undefined) data.value = value;
+    if (probability !== undefined) data.probability = probability;
+    if (expectedCloseAt !== undefined) data.expectedCloseAt = expectedCloseAt ? new Date(expectedCloseAt) : null;
+    if (customData !== undefined) {
+      data.customData = { ...(deal.customData as object ?? {}), ...customData };
+    }
 
-    const updated = await this.prisma.deal.update({ where: { id }, data, include: DEAL_INCLUDE });
+    const updated = await this.prisma.deal.update({ where: { id }, data: data as any, include: DEAL_INCLUDE });
     return serializeDeal(updated);
   }
 

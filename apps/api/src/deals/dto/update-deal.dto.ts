@@ -6,4 +6,5 @@ export class UpdateDealDto {
   expectedCloseAt?: string | null;
   assignedToId?: string | null;
   notes?: string | null;
+  customData?: Record<string, unknown>;
 }
