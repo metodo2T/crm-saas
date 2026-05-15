@@ -150,14 +150,14 @@ export function DealSlideOver({ deal, open, stages, onClose }: Props) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 resize-none outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 resize-none outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <Button
             onClick={() => updateMutation.mutate()}
             disabled={updateMutation.isPending}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white"
           >
             {updateMutation.isPending ? 'Salvando...' : 'Salvar alterações'}
           </Button>
@@ -167,7 +167,7 @@ export function DealSlideOver({ deal, open, stages, onClose }: Props) {
             <select
               value={targetStageId}
               onChange={(e) => setTargetStageId(e.target.value)}
-              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {stages.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>

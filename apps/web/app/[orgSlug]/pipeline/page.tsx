@@ -1,3 +1,4 @@
+// apps/web/app/[orgSlug]/pipeline/page.tsx
 'use client';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -27,9 +28,9 @@ export default function PipelinePage() {
   });
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="flex flex-col h-full">
       <PipelineHeader onNewDeal={() => setNewDealOpen(true)} />
-      <main className="flex-1 overflow-hidden p-4 bg-slate-50">
+      <main className="flex-1 overflow-hidden p-4 bg-[#0f172a]">
         <PipelineKanban />
       </main>
       <NewDealSheet

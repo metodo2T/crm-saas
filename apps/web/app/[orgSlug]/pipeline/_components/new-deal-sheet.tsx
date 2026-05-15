@@ -95,7 +95,7 @@ export function NewDealSheet({ open, onClose, stages, defaultStageId }: Props) {
             <select
               value={stageId}
               onChange={(e) => setStageId(e.target.value)}
-              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {regularStages.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -154,7 +154,7 @@ export function NewDealSheet({ open, onClose, stages, defaultStageId }: Props) {
           <Button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white"
           >
             {mutation.isPending ? 'Criando...' : 'Criar Deal'}
           </Button>
