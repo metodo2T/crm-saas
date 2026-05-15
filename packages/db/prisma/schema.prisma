@@ -22,6 +22,7 @@ model Organization {
   whatsappInstance WhatsAppInstance?
   pipeline        Pipeline?
   deals           Deal[]
+  customFieldDefs CustomFieldDef[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 }
@@ -135,6 +136,7 @@ model Lead {
   utmTerm          String?
   fbclid           String?
   gclid            String?
+  customData       Json?
   convertedAt      DateTime?
   whatsappMessages WhatsAppMessage[]
   deals            Deal[]
@@ -205,6 +207,38 @@ enum WaMsgStatus {
   READ
 }
 
+enum CustomFieldEntity {
+  LEAD
+  DEAL
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  MULTI_SELECT
+  CHECKBOX
+  URL
+}
+
+model CustomFieldDef {
+  id             String            @id @default(uuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity         CustomFieldEntity
+  name           String
+  slug           String
+  type           CustomFieldType
+  options        Json?
+  order          Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([organizationId, entity, slug])
+  @@index([organizationId, entity, order])
+}
+
 enum StageType {
   REGULAR
   WON
@@ -256,6 +290,7 @@ model Deal {
   wonAt           DateTime?
   lostAt          DateTime?
   lostReason      String?
+  customData      Json?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
