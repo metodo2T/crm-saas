@@ -10,7 +10,7 @@ export class NotificationsService {
   private webUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.fromDomain = config.get('EMAIL_FROM_DOMAIN') ?? 'noreply.seucrm.com';
+    this.fromDomain = config.get('EMAIL_FROM_DOMAIN') ?? '';
     this.webUrl = config.get('WEB_URL') ?? 'http://localhost:3000';
     const key = config.get<string>('RESEND_API_KEY');
     if (key) {
@@ -27,6 +27,11 @@ export class NotificationsService {
     }
   }
 
+  private fromAddress(label: string): string {
+    if (this.fromDomain) return `${label} <notificacoes@${this.fromDomain}>`;
+    return 'onboarding@resend.dev';
+  }
+
   async sendLeadCreated(opts: {
     to: string[];
     leadName: string;
@@ -39,7 +44,7 @@ export class NotificationsService {
     if (!this.resend || !opts.to.length) return;
     try {
       await this.resend.emails.send({
-        from: `${opts.orgName} CRM <notificacoes@${this.fromDomain}>`,
+        from: this.fromAddress(`${opts.orgName} CRM`),
         to: opts.to,
         subject: `Novo lead: ${opts.leadName}`,
         html: this.leadCreatedHtml(opts),
@@ -57,7 +62,7 @@ export class NotificationsService {
     if (!this.resend) return;
     try {
       await this.resend.emails.send({
-        from: `CRM <notificacoes@${this.fromDomain}>`,
+        from: this.fromAddress('CRM'),
         to: [opts.to],
         subject: `Lead atribuído a você: ${opts.leadName}`,
         html: this.leadAssignedHtml(opts),
