@@ -13,6 +13,7 @@ import { AuditModule } from './audit/audit.module';
 import { LeadsModule } from './leads/leads.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { DealsModule } from './deals/deals.module';
+import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 
 @Module({
   controllers: [AppController],
@@ -30,6 +31,7 @@ import { DealsModule } from './deals/deals.module';
     LeadsModule,
     WhatsAppModule,
     DealsModule,
+    CustomFieldsModule,
   ],
 })
 export class AppModule {}
