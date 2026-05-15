@@ -20,7 +20,7 @@ export function AppSidebar() {
   const base = `/${orgSlug}`;
 
   return (
-    <aside className="w-56 shrink-0 h-screen sticky top-0 flex flex-col bg-[#1e293b] border-r border-[#334155]">
+    <aside className="w-56 shrink-0 h-screen flex flex-col bg-[#1e293b] border-r border-[#334155]">
       {/* Logo */}
       <div className="px-4 py-5 flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
@@ -46,7 +46,7 @@ export function AppSidebar() {
       <nav className="flex-1 px-2 space-y-0.5">
         {NAV.map(({ label, seg, Icon }) => {
           const href = seg === 'settings' ? `${base}/settings/workspace` : `${base}/${seg}`;
-          const active = pathname.startsWith(`${base}/${seg}`);
+          const active = pathname === `${base}/${seg}` || pathname.startsWith(`${base}/${seg}/`);
           return (
             <Link
               key={seg}
