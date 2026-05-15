@@ -25,7 +25,7 @@ function WhatsAppPageInner() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-64 text-slate-600 text-sm">
         Carregando...
       </div>
     );
@@ -42,7 +42,7 @@ function WhatsAppPageInner() {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 56px)' }} className="flex flex-col">
+    <div className="h-full flex flex-col">
       <WaInbox instance={instance} onDisconnect={() => setForceSetup(true)} initialJid={initialJid} />
     </div>
   );

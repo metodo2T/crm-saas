@@ -86,18 +86,18 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar */}
-      <aside className="w-72 border-r border-slate-200 bg-white flex flex-col shrink-0">
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+      {/* Sidebar conversations */}
+      <aside className="w-72 border-r border-[#334155] bg-[#1e293b] flex flex-col shrink-0">
+        <div className="px-4 py-3 border-b border-[#334155] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm font-semibold text-slate-900">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-sm font-semibold text-slate-200">
               {instance.phone ? `+${instance.phone}` : 'WhatsApp'}
             </span>
           </div>
           <button
             onClick={() => disconnectMutation.mutate()}
-            className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+            className="text-xs text-slate-600 hover:text-red-400 transition-colors"
             title="Desconectar"
           >
             Desconectar
@@ -106,7 +106,7 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
 
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
-            <div className="p-4 text-xs text-slate-400 text-center mt-8">
+            <div className="p-4 text-xs text-slate-600 text-center mt-8">
               Nenhuma conversa ainda.<br />As mensagens recebidas aparecerão aqui.
             </div>
           ) : (
@@ -114,21 +114,23 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
               <button
                 key={conv.remoteJid}
                 onClick={() => setSelectedJid(conv.remoteJid)}
-                className={`w-full text-left px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
-                  selectedJid === conv.remoteJid ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                className={`w-full text-left px-4 py-3 border-b border-[#334155]/50 transition-colors ${
+                  selectedJid === conv.remoteJid
+                    ? 'bg-indigo-500/15 border-l-2 border-l-indigo-500'
+                    : 'hover:bg-[#334155]/40'
                 }`}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className="text-sm font-medium text-slate-900 truncate">
+                  <p className="text-sm font-medium text-slate-200 truncate">
                     {conv.lead?.name ?? conv.remoteJid.split('@')[0]}
                   </p>
-                  <span className="text-[10px] text-slate-400 shrink-0">
+                  <span className="text-[10px] text-slate-600 shrink-0">
                     {formatDistanceToNow(new Date(conv.lastTimestamp), { addSuffix: false, locale: ptBR })}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 truncate">{conv.lastMessage}</p>
                 {conv.unread > 0 && (
-                  <span className="inline-block mt-1 bg-green-500 text-white text-[10px] rounded-full px-1.5 py-0.5 font-bold">
+                  <span className="inline-block mt-1 bg-emerald-600 text-white text-[10px] rounded-full px-1.5 py-0.5 font-bold">
                     {conv.unread}
                   </span>
                 )}
@@ -138,38 +140,31 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
         </div>
       </aside>
 
-      {/* Main chat area */}
-      <main className="flex-1 flex flex-col bg-slate-50 min-w-0">
+      {/* Main chat */}
+      <main className="flex-1 flex flex-col bg-[#0f172a] min-w-0">
         {!selectedJid ? (
-          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+          <div className="flex items-center justify-center h-full text-slate-600 text-sm">
             Selecione uma conversa
           </div>
         ) : (
           <>
-            {/* Chat header */}
-            <div className="px-5 py-3 bg-white border-b border-slate-200 shrink-0">
-              <p className="text-sm font-semibold text-slate-900">{displayName(selectedJid)}</p>
+            <div className="px-5 py-3 bg-[#1e293b] border-b border-[#334155] shrink-0">
+              <p className="text-sm font-semibold text-slate-200">{displayName(selectedJid)}</p>
               {selectedConv?.lead && (
-                <p className="text-xs text-slate-400">{selectedJid.split('@')[0]}</p>
+                <p className="text-xs text-slate-500">{selectedJid.split('@')[0]}</p>
               )}
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm ${
-                      msg.fromMe
-                        ? 'bg-green-500 text-white rounded-br-sm'
-                        : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
-                    }`}
-                  >
+                <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm ${
+                    msg.fromMe
+                      ? 'bg-indigo-600 text-white rounded-br-sm'
+                      : 'bg-[#1e293b] border border-[#334155] text-slate-200 rounded-bl-sm'
+                  }`}>
                     <p>{msg.body}</p>
-                    <p className={`text-[10px] mt-1 ${msg.fromMe ? 'text-green-100' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] mt-1 ${msg.fromMe ? 'text-indigo-200' : 'text-slate-600'}`}>
                       {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
@@ -178,19 +173,18 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
               <div ref={bottomRef} />
             </div>
 
-            {/* Message input */}
-            <form onSubmit={handleSend} className="px-4 py-3 bg-white border-t border-slate-200 flex gap-2 shrink-0">
+            <form onSubmit={handleSend} className="px-4 py-3 bg-[#1e293b] border-t border-[#334155] flex gap-2 shrink-0">
               <input
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                className="flex-1 text-sm px-3 py-2 rounded-lg border border-[#334155] bg-[#0f172a] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <Button
                 type="submit"
                 size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
                 disabled={!text.trim() || sendMutation.isPending}
               >
                 Enviar
@@ -200,7 +194,6 @@ export function WaInbox({ instance, onDisconnect, initialJid }: Props) {
         )}
       </main>
 
-      {/* Lead panel — only visible when a conversation is selected */}
       {selectedJid && (
         <WaLeadPanel
           jid={selectedJid}
