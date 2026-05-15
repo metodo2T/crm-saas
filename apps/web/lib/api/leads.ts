@@ -23,6 +23,7 @@ export interface Lead {
   fbclid?: string;
   gclid?: string;
   convertedAt?: string;
+  customData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

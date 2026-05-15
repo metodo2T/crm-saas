@@ -38,6 +38,7 @@ export interface Deal {
   wonAt?: string | null;
   lostAt?: string | null;
   lostReason?: string | null;
+  customData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,6 +92,7 @@ export async function updateDeal(token: string, id: string, data: {
   expectedCloseAt?: string | null;
   assignedToId?: string | null;
   notes?: string | null;
+  customData?: Record<string, unknown>;
 }): Promise<Deal> {
   return apiFetch(`/deals/${id}`, token, { method: 'PATCH', body: JSON.stringify(data) });
 }
