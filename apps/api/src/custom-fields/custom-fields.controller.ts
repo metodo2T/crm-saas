@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { CurrentOrg, CurrentUser } from '../auth/decorators';
@@ -25,6 +26,9 @@ export class CustomFieldsController {
     @CurrentOrg() orgId: string,
     @Query('entity') entity: 'LEAD' | 'DEAL',
   ) {
+    if (entity !== 'LEAD' && entity !== 'DEAL') {
+      throw new BadRequestException('entity must be LEAD or DEAL');
+    }
     return this.customFieldsService.findAll(orgId, entity);
   }
 
