@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 import {
-  LayoutDashboard, Users, Kanban, MessageCircle, Settings,
+  LayoutDashboard, Users, Kanban, MessageCircle, Settings, Sliders,
 } from 'lucide-react';
 
 const NAV = [
@@ -63,6 +63,33 @@ export function AppSidebar() {
           );
         })}
       </nav>
+
+      {/* Personalização */}
+      <div className="px-2 pb-2">
+        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 mb-1">
+          Personalização
+        </p>
+        {[
+          { label: 'Campos Leads', href: `${base}/settings/custom-fields/leads` },
+          { label: 'Campos Deals', href: `${base}/settings/custom-fields/deals` },
+        ].map(({ label, href }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                active
+                  ? 'bg-indigo-500/15 text-indigo-300 border-l-2 border-indigo-500'
+                  : 'text-slate-500 hover:bg-[#334155]/60 hover:text-slate-300'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5 shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
+      </div>
 
       {/* User */}
       <div className="px-4 py-4 border-t border-[#334155]">
